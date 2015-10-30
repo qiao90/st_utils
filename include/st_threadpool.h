@@ -9,10 +9,19 @@ enum THREAD_STATUS {
     THREAD_STATUS_MAX,
 };
 
+static const char* THREAD_STATUS_STR[] = 
+{
+    "SPARE   ",
+    "RUNNING ",
+    "DEAD    ",
+    "INVALID ",
+};
+
 typedef struct _st_thread {
     SLIST_HEAD list;
     enum THREAD_STATUS status; //
     pthread_t  pid;
+    time_t     start;//登记任务开始的时间
 } ST_THREAD, *P_ST_THREAD;
 
 typedef struct _st_tasks {
@@ -22,6 +31,7 @@ typedef struct _st_tasks {
 }ST_TASK, *P_ST_TASK;
 
 typedef struct _st_thread_manage {
+    int          thread_total;
     volatile int thread_spare;
     volatile int thread_running;
     volatile int thread_dead;
@@ -29,6 +39,7 @@ typedef struct _st_thread_manage {
     SLIST_HEAD   threads;   // threads的结构不会被外部访问，不需要保护
     SLIST_HEAD   tasks;     // 需要保护操作，任何线程都可以添加任务
     pthread_mutex_t tk_mutex;
+    pthread_cond_t  tk_cond;
 } ST_THREAD_MANAGE, *P_ST_THREAD_MANAGE;
 
 P_ST_THREAD_MANAGE st_threadpool_init(P_ST_THREAD_MANAGE p_manage, int cnt);
