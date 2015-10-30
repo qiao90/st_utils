@@ -4,17 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef DEBUG
-#define st_d_print(...) \
-	do{ fprintf( stderr,"DEBUG:%s|%s<%d>\n",__FILE__, __FUNCTION__,__LINE__); \
-		fprintf( stderr , __VA_ARGS__ ); \
-	}while(0)
-#define st_print(...) fprintf( stderr , __VA_ARGS__ )
-#else
-#define st_d_print(...) \
-	do {} while(0)
-#define st_print(...) fprintf( stderr , __VA_ARGS__ )
-#endif
+#include "st_others.h"
 
 //根据list_head简化得到的单向NULL结尾链表
 typedef struct _slist_head {

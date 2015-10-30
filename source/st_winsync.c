@@ -1,4 +1,12 @@
 #include "WINDEF.H"
+#include "st_others.h"
+
+/**
+ * 主要用于提供一些在Windows下同步操作的Linux实现 
+ * 包括 线程内部的  CriticalSection 
+ * 进程间的 Mutex 
+ *        Event 
+ */
 
 /*****************************
  * Windows兼容函数
