@@ -5,10 +5,7 @@
 #include <stdlib.h>
 #include <signal.h>
 
-
-#include "st_slist.h"
 #include "st_threadpool.h"
-#include "st_others.h"
 
 static const int MAX_THREADS = 100;
 
@@ -101,7 +98,7 @@ void st_threadpool_statistic(P_ST_THREAD_MANAGE p_manage)
     time_t now;
     time(&now);
 
-    st_print("\n\n");
+    st_print("\n");
     st_print("======================\n");
     st_print("General Thread Status:\n");
     st_print("SPARE:%d\t RUNNING:%d\t DEAD:%d\n",
@@ -219,7 +216,6 @@ static void* threadpool_manage(void *data)
     for ( ; ;)
     {
         sleep(2);
-        st_print("manage running...\n");
         st_threadpool_refresh(p_manage);
         st_threadpool_statistic(p_manage);
     }
@@ -278,6 +274,8 @@ static void* test_func(void* data)
     //st_print("Function Called with %d under %ul \n", num, pthread_self());
     
     i ++;
+
+    // »î¶¯¼ì²â²âÊÔ
     if (i > 30)
        pthread_exit(NULL);
 

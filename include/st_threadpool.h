@@ -1,6 +1,8 @@
 #ifndef __ST_THREADPOOL_H
 #define __ST_THREADPOOL_H
 
+#include "st_others.h"
+#include "st_slist.h"
 
 enum THREAD_STATUS {
     THREAD_SPARE,
