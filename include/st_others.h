@@ -3,6 +3,8 @@
 
 #define DEBUG
 
+#include <stdio.h>
+
 #ifdef DEBUG
 #define st_d_print(...) \
 	do{ fprintf( stderr,"DEBUG:%s|%s<%d>\n",__FILE__, __FUNCTION__,__LINE__); \

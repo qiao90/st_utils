@@ -25,4 +25,25 @@ static int st_add_new_event(int accepted_socket, P_EPOLL_STRUCT p_epoll);
 int st_buildsocket(int listen_cnt, int port);
 
 
+/**
+ * For st_memmap
+ */
+
+#include <limits.h>
+
+typedef struct _st_memmap_t
+{    	
+    void*   location;   //映射得到的内存地址
+    int	    fd;	        //文件操作句柄
+    size_t	size;	    //最大映射大小
+    char    filename[PATH_MAX]; //映射到物理磁盘文件
+    char    mapname[PATH_MAX];  //map的名字，例如 RPCShare等
+} ST_MEMMAP_T, * P_ST_MEMMAP_T;
+
+void* st_memmap_create(const char* filename, const char* share_name, size_t max_size);
+void* st_memmap_open(const char* share_name, int fixaddr, int writable);
+void st_memmap_close(P_ST_MEMMAP_T p_token);
+void st_memmap_destroy(P_ST_MEMMAP_T p_token);
+void st_memmap_test(void);
+
 #endif
