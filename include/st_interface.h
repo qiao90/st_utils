@@ -46,4 +46,72 @@ void st_memmap_close(P_ST_MEMMAP_T p_token);
 void st_memmap_destroy(P_ST_MEMMAP_T p_token);
 void st_memmap_test(void);
 
+
+/**
+ *  For Win Sync
+ */
+
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/sem.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <semaphore.h>
+
+// CriticalSection
+typedef pthread_mutex_t CRITICAL_SECTION;
+typedef CRITICAL_SECTION *LPCRITICAL_SECTION;
+void InitializeCriticalSection(LPCRITICAL_SECTION section);
+void EnterCriticalSection(LPCRITICAL_SECTION section);
+void LeaveCriticalSection(LPCRITICAL_SECTION section);
+void DeleteCriticalSection(LPCRITICAL_SECTION section);
+
+
+// Mutex
+
+//为了实现Wait Close 接口的统一，以及将来同步方式的扩展
+enum SYNC_TYPE 
+{
+    SYNC_MUTEX,
+    SYNC_EVENT,
+};
+
+typedef struct _st_winsync_t
+{
+    char    sync_name[PATH_MAX];   //strlen==0 if Intra-process
+    enum    SYNC_TYPE type;
+    union
+    {
+        sem_t   mutex;      //unamed mutex
+        sem_t*  p_mutex;    //named mutex
+    };
+    void*   extra;
+} ST_WINSYNC_T, * P_ST_WINSYNC_T;
+
+BOOL  st_winsync_destroy(P_ST_WINSYNC_T p_sync);
+
+HANDLE CreateMutex( void* lpMutexAttributes,
+                BOOL bInitialOwner, const char* lpName);
+HANDLE OpenMutex( DWORD dwDesiredAccess,
+                BOOL bInheritHandle, const char* lpName);
+DWORD  WaitForSingleObject(HANDLE hHandle,
+                DWORD dwMilliseconds);
+BOOL  ReleaseMutex(HANDLE hMutex);
+BOOL  CloseHandle( HANDLE hObject);
+
+
+// Event
+HANDLE CreateEvent(void* lpEventAttributes,
+                BOOL bManualReset,BOOL bInitialState,
+                const char* lpName);
+HANDLE WINAPI OpenEvent( DWORD dwDesiredAccess,
+                         BOOL bInheritHandle, const char* lpName );
+BOOL ResetEvent( HANDLE hEvent);
+BOOL SetEvent( HANDLE hEvent);
+
+
+void Sleep(DWORD dwMilliseconds);
+BOOL get_workdir( char* store);
+
 #endif

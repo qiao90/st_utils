@@ -14,8 +14,7 @@
 #include "st_interface.h"
     
 
-const char* ST_MEMMAP_PREFIX = "/tmp/ST_MEMMAP/";
-const int ST_PRJ_ID = 0x23;
+static const char* ST_MEMMAP_PREFIX = "/tmp/ST_MEMMAP/";
 
 void* st_memmap_create(const char* filename, const char* share_name, size_t max_size)
 {
@@ -91,7 +90,9 @@ void* st_memmap_create(const char* filename, const char* share_name, size_t max_
             goto failed;
         }
     }
-    
+
+    // Just for safe
+    lseek(p_token->fd, 0, SEEK_SET);
 
     p_token->location = mmap( NULL, p_token->size,
                       PROT_READ | PROT_WRITE,
