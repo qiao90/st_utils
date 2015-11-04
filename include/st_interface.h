@@ -6,6 +6,7 @@
  * For st_epoll
  */
 #include <sys/epoll.h>
+#include "WINDEF.H"
 #include "st_threadpool.h"
 
 typedef struct __epoll_event 
@@ -83,8 +84,8 @@ typedef struct _st_winsync_t
     enum    SYNC_TYPE type;
     union
     {
-        sem_t   mutex;      //unamed mutex
-        sem_t*  p_mutex;    //named mutex
+        sem_t   sem;      //unamed mutex
+        sem_t*  p_sem;    //named mutex
     };
     void*   extra;
 } ST_WINSYNC_T, * P_ST_WINSYNC_T;
@@ -95,6 +96,7 @@ HANDLE CreateMutex( void* lpMutexAttributes,
                 BOOL bInitialOwner, const char* lpName);
 HANDLE OpenMutex( DWORD dwDesiredAccess,
                 BOOL bInheritHandle, const char* lpName);
+//如果超时，返回ETIMEDOUT
 DWORD  WaitForSingleObject(HANDLE hHandle,
                 DWORD dwMilliseconds);
 BOOL  ReleaseMutex(HANDLE hMutex);
@@ -108,6 +110,7 @@ HANDLE CreateEvent(void* lpEventAttributes,
 HANDLE WINAPI OpenEvent( DWORD dwDesiredAccess,
                          BOOL bInheritHandle, const char* lpName );
 BOOL ResetEvent( HANDLE hEvent);
+// 如果已经有事件了，就返回EBUSY，不实际再发送
 BOOL SetEvent( HANDLE hEvent);
 
 

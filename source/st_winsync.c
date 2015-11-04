@@ -2,6 +2,8 @@
 #include "st_others.h"
 #include "st_interface.h"
 
+#include <sys/timeb.h>
+
 /**
  * 主要用于提供一些在Windows下同步操作的Linux实现 
  * 包括 线程内部的  CriticalSection 
@@ -64,8 +66,10 @@ HANDLE CreateMutex( void* lpMutexAttributes,
     if ( lpName) // Inter-Process
     {
         strncpy(p_mutex->sync_name, lpName, PATH_MAX);
-        p_mutex->p_mutex = sem_open(p_mutex->sync_name, O_CREAT|O_EXCL, 0644, 1);
-        if (p_mutex->p_mutex == SEM_FAILED)
+        sem_unlink(lpName); // Just for safe
+        //bInitialOwner
+        p_mutex->p_sem = sem_open(p_mutex->sync_name, O_CREAT | O_EXCL, 0644, bInitialOwner); 
+        if (p_mutex->p_sem == SEM_FAILED)
         {
             st_d_print("Create Mutex: %s failed!\n", p_mutex->sync_name);
             free(p_mutex);
@@ -75,7 +79,7 @@ HANDLE CreateMutex( void* lpMutexAttributes,
     else        // Intra-Process
     {
         p_mutex->sync_name[0] = '\0';
-        if( sem_init((sem_t *)(&p_mutex->mutex), 1/*pshared for forked dismiss*/, 1) != 0)
+        if( sem_init((sem_t *)(&p_mutex->sem), 1/*pshared for forked dismiss*/, 1) != 0)
         {
             st_print("semaphore initilization");
             return NULL;
@@ -104,8 +108,9 @@ HANDLE OpenMutex( DWORD dwDesiredAccess,
     p_mutex->type = SYNC_MUTEX;
 
     strncpy(p_mutex->sync_name, lpName, PATH_MAX);
-    p_mutex->p_mutex = sem_open(p_mutex->sync_name, 0, 0644, 1);
-    if (p_mutex->p_mutex == SEM_FAILED)
+    // initial value => 0
+    p_mutex->p_sem = sem_open(p_mutex->sync_name, 0, 0644, 0);
+    if (p_mutex->p_sem == SEM_FAILED)
     {
         st_d_print("Open Mutex: %s failed!\n", p_mutex->sync_name);
         free(p_mutex);
@@ -115,13 +120,43 @@ HANDLE OpenMutex( DWORD dwDesiredAccess,
     return p_mutex;
 }
 
+static struct timespec* 
+st_make_timespec(struct timespec* p_ts, time_t dwMilliseconds)
+{
+    struct timeb    tb;
+    time_t sec, millisec;
+
+    if (!p_ts)
+        return NULL;
+    
+    sec      = dwMilliseconds / 1000;
+    millisec = dwMilliseconds % 1000;
+
+    ftime( &tb );
+    tb.time     += sec;
+    tb.millitm  += millisec;
+
+    tb.time     += (tb.millitm / 1000);
+    tb.millitm  =  tb.millitm % 1000;
+
+    p_ts->tv_sec   = tb.time;
+    p_ts->tv_nsec  = tb.millitm * 1000000 ;    //ns
+
+    return p_ts;
+}
 
 DWORD  WaitForSingleObject(HANDLE hHandle,
                 DWORD dwMilliseconds)
 {
     P_ST_WINSYNC_T p_sync = (P_ST_WINSYNC_T)hHandle;
-    if (!p_sync)
-        return -1;
+
+    struct timespec	ts;
+
+    if (! p_sync)
+    {
+        st_d_print("Invalid Argument!\n");
+        return 0;
+    }
 
     if ( dwMilliseconds == INFINITE)
     {
@@ -129,17 +164,75 @@ DWORD  WaitForSingleObject(HANDLE hHandle,
         {
             if (strlen(p_sync->sync_name))  //inter-process
             {
-                sem_wait((sem_t *)(p_sync->p_mutex));
+                return sem_wait((sem_t *)(p_sync->p_sem));
             }
             else    // intra-process
             {
-                sem_wait((sem_t *)(&p_sync->mutex));
+                return sem_wait((sem_t *)(&p_sync->sem));
+            }
+        }
+        if (p_sync->type == SYNC_EVENT)
+        {
+            if (strlen(p_sync->sync_name))  //inter-process
+            {
+                return sem_wait((sem_t *)(p_sync->p_sem));
+            }
+            else    // intra-process
+            {
+                return sem_wait((sem_t *)(&p_sync->sem));
             }
         }
     }
     else
     {
+        st_make_timespec(&ts, dwMilliseconds);
 
+        if (p_sync->type == SYNC_MUTEX)
+        {
+            if (strlen(p_sync->sync_name))  //inter-process
+            {
+                if(sem_timedwait((sem_t *)(p_sync->p_sem), &ts))
+                {
+                    if ( errno == ETIMEDOUT )
+                        return ETIMEDOUT;
+                    else
+                        return -1;
+                }
+            }
+            else    // intra-process
+            {
+                if(sem_timedwait((sem_t *)(&p_sync->sem), &ts))
+                {
+                    if ( errno == ETIMEDOUT )
+                        return ETIMEDOUT;
+                    else
+                        return -1;
+                }
+            }
+        }
+        if (p_sync->type == SYNC_EVENT)
+        {
+            if (strlen(p_sync->sync_name))  //inter-process
+            {
+                if(sem_timedwait((sem_t *)(p_sync->p_sem), &ts))
+                {
+                    if ( errno == ETIMEDOUT )
+                        return ETIMEDOUT;
+                    else
+                        return -1;
+                }
+            }
+            else    // intra-process
+            {
+                if(sem_timedwait((sem_t *)(&p_sync->sem), &ts))
+                {
+                    if ( errno == ETIMEDOUT )
+                        return ETIMEDOUT;
+                    else
+                        return -1;
+                }
+            }
+        }
     }
 
     return 0;
@@ -148,18 +241,21 @@ DWORD  WaitForSingleObject(HANDLE hHandle,
 BOOL  ReleaseMutex(HANDLE hMutex)
 {
     P_ST_WINSYNC_T p_mutex = (P_ST_WINSYNC_T)hMutex;
-    if (!p_mutex)
-        return 0;
+    if (!p_mutex || p_mutex->type != SYNC_MUTEX)
+    {
+        st_d_print("Invalid Argument!\n");
+        return FALSE;
+    }
 
     if (p_mutex->type == SYNC_MUTEX)
     {
         if (strlen(p_mutex->sync_name))  //inter-process
         {
-            sem_post((sem_t *)(p_mutex->p_mutex));
+            sem_post((sem_t *)(p_mutex->p_sem));
         }
         else    // intra-process
         {
-            sem_post((sem_t *)(&p_mutex->mutex));
+            sem_post((sem_t *)(&p_mutex->sem));
         }
     }
     else
@@ -167,29 +263,43 @@ BOOL  ReleaseMutex(HANDLE hMutex)
         SYS_ABORT("WIN SYNC error For Mutex with %d\n", p_mutex->type);
     }
 
-    return 1;
+    return TRUE;
 }
 
 BOOL  CloseHandle( HANDLE hObject)
 {
     P_ST_WINSYNC_T p_sync = (P_ST_WINSYNC_T)hObject;
+
     if (!p_sync)
-        return 0;
+        return FALSE;
 
     if (p_sync->type == SYNC_MUTEX)
     {
         if (strlen(p_sync->sync_name))  //inter-process
         {
-            sem_close((sem_t *)(p_sync->p_mutex));
+            sem_close((sem_t *)(p_sync->p_sem));
             sem_unlink(p_sync->sync_name);
         }
         else    // intra-process
         {
-            sem_close((sem_t *)(&p_sync->mutex));   //where to call sem_destroy???
+            sem_close((sem_t *)(&p_sync->sem));   //where to call sem_destroy???
         }
     }
 
-    return 1;
+    if (p_sync->type == SYNC_EVENT)
+    {
+        if (strlen(p_sync->sync_name))  //inter-process
+        {
+            sem_close((sem_t *)(p_sync->p_sem));
+            sem_unlink(p_sync->sync_name);
+        }
+        else    // intra-process
+        {
+            sem_close((sem_t *)(&p_sync->sem));   //where to call sem_destroy???
+        }
+    }
+
+    return TRUE;
 }
 
 /**
@@ -199,7 +309,7 @@ BOOL  CloseHandle( HANDLE hObject)
 BOOL  st_winsync_destroy(P_ST_WINSYNC_T p_sync)
 {
     if (!p_sync)
-        return 0;
+        return FALSE;
 
     if (p_sync->type == SYNC_MUTEX)
     {
@@ -209,31 +319,170 @@ BOOL  st_winsync_destroy(P_ST_WINSYNC_T p_sync)
         }
         else    // intra-process
         {
-            sem_destroy((sem_t *)(&p_sync->mutex)); 
+            sem_destroy((sem_t *)(&p_sync->sem)); 
         }
     }
 
-    return 1;
+    return TRUE;
 }
+
+
+/**************** 
+ * Windows事件通知，可以跨进程 
+ *  
+ * Setting an event that is already set has no effect. (NOT IMPELTE)
+ *  
+ * Using Mutex simulate producer & comsumer
+ */
+HANDLE CreateEvent(void* lpEventAttributes,
+                BOOL bManualReset,BOOL bInitialState,
+                const char* lpName)
+{
+    P_ST_WINSYNC_T p_event = NULL;
+
+    p_event = (P_ST_WINSYNC_T)CreateMutex(lpEventAttributes,
+                0, lpName);
+
+    if (!p_event)
+        return NULL;
+
+    p_event->type = SYNC_EVENT;
+
+    if ( bInitialState )
+        SetEvent(p_event);
+
+    return p_event; 
+}
+
+HANDLE WINAPI OpenEvent( DWORD dwDesiredAccess,
+                         BOOL bInheritHandle, const char* lpName )
+{
+    P_ST_WINSYNC_T p_event = NULL;
+
+    p_event = (P_ST_WINSYNC_T)OpenMutex(dwDesiredAccess,
+                bInheritHandle, lpName);
+
+    if (!p_event)
+        return NULL;
+
+    p_event->type = SYNC_EVENT;
+
+    return p_event; 
+}
+
+
+BOOL ResetEvent( HANDLE hEvent)
+{
+
+    st_d_print("Not Implemented!!!!\n");
+
+    return FALSE;
+}
+
+BOOL SetEvent( HANDLE hEvent)
+{
+    P_ST_WINSYNC_T p_event = (P_ST_WINSYNC_T)hEvent;
+    int ret = 0;
+
+    if (p_event->type == SYNC_EVENT)
+    {
+        //如果上次的事件还没有被消费掉，就忽略本次的发送
+        //是否要重发，可以调用程序根据结果来判断
+
+        if (strlen(p_event->sync_name))  //inter-process
+        {
+            sem_getvalue((sem_t *)(p_event->p_sem), &ret);
+            if (ret > 0)
+            {
+                st_d_print("Producer Fast, Dismiss it!\n");
+                return EBUSY;
+            }
+            return sem_post((sem_t *)(p_event->p_sem)); 
+        }
+        else    // intra-process
+        {
+            sem_getvalue((sem_t *)(&p_event->sem), &ret);
+            if (ret > 0)
+            {
+                st_d_print("Producer Fast, Dismiss it!\n");
+                return EBUSY;
+            }
+            return sem_post((sem_t *)(&p_event->sem));
+        }
+    }
+    else
+    {
+        SYS_ABORT("WIN SYNC error For Event with %d\n", p_event->type);
+    }
+
+	return TRUE;
+}
+
+
+void Sleep(DWORD dwMilliseconds)
+{
+	if(dwMilliseconds >= 1000 && !(dwMilliseconds % 1000))
+		sleep(dwMilliseconds/1000);
+	else
+		usleep(dwMilliseconds*1000);
+	
+	return;
+}
+
+
+BOOL get_workdir( char* store)
+{
+    if(!store)
+        return FALSE;
+        
+    int cnt = readlink("/proc/self/exe", store, PATH_MAX);
+    if(cnt == -1)
+        return FALSE;
+        
+    char* ptr = store + strlen(store);
+    while(ptr > store && *ptr != '/')
+        ptr --;
+    
+    if(ptr < store)
+        return FALSE;
+     
+     *(ptr+1) = '\0';
+        
+    return TRUE;
+}
+
+
+
+/**
+ * TEST
+ */
+
 
 #include <sys/wait.h>
 
 void* mutex_thread(void* data)
 {
     int i = 0, nloop = 10;
+    int ret = 0;
+
     P_ST_WINSYNC_T p_mutex = (P_ST_WINSYNC_T)data;
     P_ST_MEMMAP_T p_token = (P_ST_MEMMAP_T)p_mutex->extra;
 
     for (i = 0; i < nloop; i++) 
     {
-        WaitForSingleObject(p_mutex, INFINITE);
-        st_print("G_LOCK\n");
+        ret = WaitForSingleObject(p_mutex, 2000); //2s
+        if (ret == ETIMEDOUT)
+        {
+            st_print("THREAD WAIT TIMEDOUT\n");
+            continue;
+        }
+        st_print("G_LOCK\n"); 
         write(p_token->fd, "GGGGG", 5);
-        usleep(50);
+        usleep(200*1000);
         write(p_token->fd, "GGGGG", 5);
         st_print("G_UNLOCK\n");
         ReleaseMutex(p_mutex);
-        usleep(100);
+        usleep(100*1000);
     }
 
     return NULL;
@@ -275,7 +524,7 @@ void st_mutex_test_intra(void)
             write(p_token->fd, "CCCCC", 5);
             st_print("C_UNLOCK\n");
             ReleaseMutex(p_mutex);
-            usleep(700*1000);
+            usleep(400*1000);
         }
 
         pthread_join(pid, NULL);
@@ -292,7 +541,7 @@ void st_mutex_test_intra(void)
         WaitForSingleObject(p_mutex, INFINITE);
         st_print("P_LOCK\n");
         write(p_token->fd, "PPPPP", 5);
-        usleep(700*1000);
+        usleep(400*1000);
         write(p_token->fd, "PPPPP", 5);
         st_print("P_UNLOCK\n");
         ReleaseMutex(p_mutex);
@@ -313,77 +562,135 @@ void st_mutex_test_intra(void)
 
 }
 
-/**************** 
- * Windows事件通知，可以跨进程
- */
-HANDLE CreateEvent(void* lpEventAttributes,
-                BOOL bManualReset,BOOL bInitialState,
-                const char* lpName)
+
+void st_event_comsumer_test(void)
 {
-    P_ST_WINSYNC_T p_event = NULL;
+    P_ST_MEMMAP_T p_token = NULL;
+    p_token = st_memmap_create(NULL, "RPC_SHARE", 4096);
+    char* ptr = p_token->location;
+    *ptr = '\0';
+    char buf[512];
 
-    p_event = (P_ST_WINSYNC_T)CreateMutex(lpEventAttributes,
-                0, lpName);
+    if (!p_token)
+        return;
 
-    if (!p_event)
-        return NULL;
-
-    p_event->type = SYNC_EVENT;
-
-    if (bInitialState )
-        SetEvent(p_event);
-
-    return p_event; 
-}
-
-HANDLE WINAPI OpenEvent( DWORD dwDesiredAccess,
-                         BOOL bInheritHandle, const char* lpName )
-{
-
-}
-
-
-BOOL ResetEvent( HANDLE hEvent)
-{
-	return TRUE;
-}
-
-BOOL SetEvent( HANDLE hEvent)
-{
-	return TRUE;
-}
-
-
-
-
-void Sleep(DWORD dwMilliseconds)
-{
-	if(dwMilliseconds >= 1000 && !(dwMilliseconds % 1000))
-		sleep(dwMilliseconds/1000);
-	else
-		usleep(dwMilliseconds*1000);
-	
-	return;
-}
-
-
-BOOL get_workdir( char* store)
-{
-    if(!store)
-        return FALSE;
-        
-    int cnt = readlink("/proc/self/exe", store, PATH_MAX);
-    if(cnt == -1)
-        return FALSE;
-        
-    char* ptr = store + strlen(store);
-    while(ptr > store && *ptr != '/')
-        ptr --;
+    P_ST_WINSYNC_T p_event = (P_ST_WINSYNC_T)CreateEvent(NULL, 0, 0, "RPC_EVENT");
     
-    if(ptr < store)
-        return FALSE;
-     
-     *(ptr+1) = '\0';
-        
-    return TRUE;
+    int i = 0, nloop = 100;
+    lseek(p_token->fd, 0, SEEK_SET);
+
+    /* back to parent process */
+    for (i = 0; i < nloop; i++) 
+    {
+        WaitForSingleObject(p_event, INFINITE);
+        memset(buf, 0, sizeof(buf));
+        lseek(p_token->fd, 0, SEEK_SET);
+        read(p_token->fd, buf, sizeof(buf));
+        st_print("COMSUMER GET:%s\n", buf);
+        usleep(300);
+    }
+    
+    st_memmap_close(p_token);
+    st_memmap_destroy(p_token);
+    CloseHandle(p_event);
+    st_winsync_destroy(p_event);
+}
+
+void st_event_producer_test(void)
+{
+
+    P_ST_MEMMAP_T p_token = NULL;
+    p_token = st_memmap_open("RPC_SHARE", 1, 1);
+    char* ptr = p_token->location;
+    *ptr = '\0';
+    char buf[512];
+
+    if (!p_token)
+        return;
+
+    P_ST_WINSYNC_T p_event = (P_ST_WINSYNC_T)OpenEvent(0, 0, "RPC_EVENT");
+    
+    int i = 0, nloop = 100;
+
+    WAIT_FOR_ENTER;
+
+    /* back to parent process */
+    for (i = 0; i < nloop; i++) 
+    {
+        snprintf(buf, sizeof(buf), "THIS IS MESSAGE: ID-%d", i);
+        lseek(p_token->fd, 0, SEEK_SET);
+        write(p_token->fd, buf, strlen(buf)+1);
+        st_print("POSTING:%s\n", buf);
+        SetEvent(p_event);
+    }
+
+    st_memmap_close(p_token);
+    CloseHandle(p_event);
+    st_winsync_destroy(p_event);
+}
+
+
+void* event_thread(void* data)
+{
+    int i = 0, nloop = 20;
+    int ret = 0;
+    char buf[512];
+
+    P_ST_WINSYNC_T p_event = (P_ST_WINSYNC_T)data;
+    P_ST_MEMMAP_T p_token = (P_ST_MEMMAP_T)p_event->extra;
+
+    for (i = 0; i < nloop; i++) 
+    {
+        snprintf(buf, sizeof(buf), "THIS IS MESSAGE: ID-%d", i);
+        lseek(p_token->fd, 0, SEEK_SET);
+        write(p_token->fd, buf, strlen(buf)+1);
+        st_print("POSTING:%s\n", buf);
+        SetEvent(p_event);
+    }
+
+    return NULL;
+}
+
+
+void st_event_thread_test(void)
+{
+    P_ST_MEMMAP_T p_token = NULL;
+    p_token = st_memmap_create(NULL, "RPC_SHARE", 4096);
+    char* ptr = p_token->location;
+    *ptr = '\0';
+    char buf[512];
+    int ret = 0;
+
+    if (!p_token)
+        return;
+
+    P_ST_WINSYNC_T p_event = (P_ST_WINSYNC_T)CreateEvent(NULL, 0, 0, "RPC_EVENT3");
+    
+    pthread_t pid;
+    p_event->extra = p_token;
+    pthread_create(&pid, NULL,event_thread, p_event);
+
+    int i = 0, nloop = 100;
+    lseek(p_token->fd, 0, SEEK_SET);
+
+    /* back to parent process */
+    for (i = 0; i < nloop; i++) 
+    {
+        ret = WaitForSingleObject(p_event, 1000); //1s
+        if (ret == ETIMEDOUT)
+        {
+            st_print("WAIT TIME OUT!\n");
+            continue;
+        }
+        memset(buf, 0, sizeof(buf)); 
+        lseek(p_token->fd, 0, SEEK_SET);
+        read(p_token->fd, buf, sizeof(buf));
+        st_print("COMSUMER GET:%s\n", buf);
+        usleep(3000);
+    }
+    
+    st_memmap_close(p_token);
+    st_memmap_destroy(p_token);
+    CloseHandle(p_event);
+    st_winsync_destroy(p_event);
 }

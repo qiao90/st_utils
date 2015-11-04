@@ -58,11 +58,13 @@ static void st_mutex_sync_test(void)
     }
 }
 
+void st_event_producer_test(void);
+
 int main(int argc, char *argv[])
 {
     //st_memmap_test3();
 
-    st_mutex_sync_test();
+    st_event_producer_test();
 
     return 0;
 }
