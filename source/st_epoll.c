@@ -127,15 +127,20 @@ void st_event_loop(P_EPOLL_STRUCT p_epoll, P_ST_THREAD_MANAGE p_manage, void* ha
         ready = epoll_wait(p_epoll->event_fd, p_events, p_epoll->max_events, -1); 
         for (int i = 0; i < ready; i++)
         {
-            if( (p_events[i].events & EPOLLERR) ||
-                (p_events[i].events & EPOLLHUP) ||
-              (!(p_events[i].events & EPOLLIN)))
+			if( (p_epoll->p_events[e_i].events & EPOLLERR) )			
             {
-                /* 异常情况 */
                 st_d_print("Epoll Error!\n");
-                close(p_events[i].data.fd);
+                close(p_epoll->p_events[e_i].data.fd);
                 continue;
             }
+			
+			if ( ( p_epoll->p_events[e_i].events & EPOLLHUP ) ||
+				 ( p_epoll->p_events[e_i].events & EPOLLRDHUP) )
+			{
+				st_d_print("Remote Disconnected!\n");
+                close(p_epoll->p_events[e_i].data.fd);
+				continue;
+			}
             
             if (listen_socket == p_events[i].data.fd)
             {
@@ -235,52 +240,48 @@ void st_event_loop(P_EPOLL_STRUCT p_epoll, P_ST_THREAD_MANAGE p_manage, void* ha
 static void* response_func(void* data)
 {
     ssize_t count;
+	ssize_t nBytes;
     char buf[512];
     int done = 0;
 
     int socket = (int)data;
     //st_print("Function Called with %d under %ul \n", num, pthread_self());
     
-    while (1)
-    {
-        count = read (socket, buf, sizeof(buf));
-        if (count == -1)
-        {
-           /* If errno == EAGAIN, that means we have read all
-            data. So go back to the main loop. */
-            if (errno != EAGAIN)
+	nBytes = 0;
+	while (TRUE)
+	{
+		//接收数据
+        count = recv (socket, buf + nBytes, 512, 0);
+            
+        if (count < 0)
+        {   
+            //数据读完了
+            if ( count == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))
             {
-                perror ("read");
-                done = 1;
+                // 由于此处的套接字已经是非阻塞的了，怎么处理后面再定
+                break;
             }
-
-            break;
+            else
+            {
+                st_print("RECV ERROR for socket:%d\n", pSock->sock); 
+                return NULL;
+            }
         }
-        else if (count == 0)
+        else if (count == 0)    //stream socket peer has performed an orderly shutdown
         {
-            /* End of file. The remote has closed the
-               connection. */
-            done = 1;
-            break;
-        }
-
-        /* Write the buffer to standard output */
-        int s = write (1, buf, count);
-        sleep(1);
-        if (s == -1)
+            //对端已经关闭了，这里也关闭
+			st_print("Peer Close the Connection, close it!\n");
+			close(socket);	// this will reclaim socket	
+			return NULL;
+        } 
+        else 
         {
-            perror ("write");
+            nBytes += count;
+            continue; // to read
         }
     }
-
-    if (done)
-    {
-        st_print ("Closed connection on descriptor %d\n",socket);
-
-        /* Closing the descriptor will make epoll remove it
-           from the set of descriptors which are monitored. */
-        close (socket);
-    }
+	
+	// Data Ready!!!!
 
     return NULL;
 }
