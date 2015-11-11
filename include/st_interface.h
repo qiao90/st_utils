@@ -49,6 +49,27 @@ void st_memmap_test(void);
 
 
 /**
+ *  For Shm
+ */
+#include <sys/types.h>
+#include <sys/ipc.h>
+	   
+typedef struct _st_shm_t
+{    	
+    void*   location;   //映射得到的内存地址
+	int		fd;
+    size_t	size;	    //最大映射大小  PAGE_SIZE  SHMMAX  
+    char    shmname[NAME_MAX];  //map的名字，例如 RPCShare等
+} ST_SHM_T, * P_ST_SHM_T;
+
+void* st_shm_create(const char* share_name, size_t max_size);
+void* st_shm_open(const char* share_name, int fixaddr, int writable);
+void st_shm_close(P_ST_SHM_T p_token);
+void st_shm_destroy(P_ST_SHM_T p_token);
+void st_shm_test(void);
+
+
+/**
  *  For Win Sync
  */
 

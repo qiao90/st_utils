@@ -11,7 +11,7 @@ SHELL = /bin/sh
 VERSION = 1.0
 SUBDIRS = source
 TESTDIR = test
-EXTRAFLAGS = -g -I./include -lpthread 
+EXTRAFLAGS = -g -I./include -lpthread -lrt
 OBJDIR = obj
 
 vpath %.c $(SUBDIRS)

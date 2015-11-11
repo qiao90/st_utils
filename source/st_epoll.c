@@ -125,7 +125,7 @@ void st_event_loop(P_EPOLL_STRUCT p_epoll, P_ST_THREAD_MANAGE p_manage, void* ha
     for ( ; ; )
     {
         ready = epoll_wait(p_epoll->event_fd, p_events, p_epoll->max_events, -1); 
-        for (int i = 0; i < ready; i++)
+        for (int e_i = 0; e_i < ready; e_i++)
         {
 			if( (p_epoll->p_events[e_i].events & EPOLLERR) )			
             {
@@ -142,7 +142,7 @@ void st_event_loop(P_EPOLL_STRUCT p_epoll, P_ST_THREAD_MANAGE p_manage, void* ha
 				continue;
 			}
             
-            if (listen_socket == p_events[i].data.fd)
+            if (listen_socket == p_events[e_i].data.fd)
             {
                  /* 新链接到了（可能会有多个连接同时到来） */
                 while (1)
@@ -181,7 +181,7 @@ void st_event_loop(P_EPOLL_STRUCT p_epoll, P_ST_THREAD_MANAGE p_manage, void* ha
                 //有侦听的套接字发送数据的请求，添加你的处理
                 if (p_manage && handler)
                 {
-                    st_threadpool_push_task(p_manage, handler, (void *)p_events[i].data.fd);  //传值调用简单些！
+                    st_threadpool_push_task(p_manage, handler, (void *)p_events[e_i].data.fd);  //传值调用简单些！
                 }
 #if 0
                 while (1)
@@ -189,7 +189,7 @@ void st_event_loop(P_EPOLL_STRUCT p_epoll, P_ST_THREAD_MANAGE p_manage, void* ha
                     ssize_t count;
                     char buf[512];
 
-                    count = read (p_events[i].data.fd, buf, sizeof(buf));
+                    count = read (p_events[e_i].data.fd, buf, sizeof(buf));
                     if (count == -1)
                     {
                         /* If errno == EAGAIN, that means we have read all
@@ -222,11 +222,11 @@ void st_event_loop(P_EPOLL_STRUCT p_epoll, P_ST_THREAD_MANAGE p_manage, void* ha
                 if (done)
                 {
                     printf ("Closed connection on descriptor %d\n",
-                          p_events[i].data.fd);
+                          p_events[e_i].data.fd);
 
                     /* Closing the descriptor will make epoll remove it
                      from the set of descriptors which are monitored. */
-                    close (p_events[i].data.fd);
+                    close (p_events[e_i].data.fd);
                 }
 #endif
             }
@@ -263,7 +263,7 @@ static void* response_func(void* data)
             }
             else
             {
-                st_print("RECV ERROR for socket:%d\n", pSock->sock); 
+                st_print("RECV ERROR for socket:%d\n", socket); 
                 return NULL;
             }
         }

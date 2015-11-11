@@ -213,6 +213,8 @@ void st_memmap_close(P_ST_MEMMAP_T p_token)
 
 void st_memmap_destroy(P_ST_MEMMAP_T p_token)
 {
+	char path_buf[PATH_MAX];
+	
     if ( ! p_token)
         return;
 
@@ -224,6 +226,10 @@ void st_memmap_destroy(P_ST_MEMMAP_T p_token)
         st_print("Removing tmp map file:%s\n", p_token->filename);
         remove(p_token->filename);
     }
+	
+	strncpy(path_buf, ST_MEMMAP_PREFIX, PATH_MAX);
+    strncat(path_buf, p_token->mapname, NAME_MAX);
+	remove(path_buf);
 
     free(p_token);
 
