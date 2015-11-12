@@ -47,8 +47,6 @@ int st_buildsocket(int listen_cnt, int port)
         close(lsocket);
 		return -1;
 	}
-	
-    st_make_nonblock(lsocket);
 
 	return lsocket;
 }
@@ -303,6 +301,8 @@ void st_epoll_test(void)
     P_EPOLL_STRUCT p_epoll = NULL;
 
     lsocket = st_buildsocket(10, 7899);
+    st_make_nonblock(lsocket);
+
     if (lsocket == -1)
     {
         st_print("st_buildsocket FAILED!\n");

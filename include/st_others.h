@@ -9,7 +9,7 @@
 
 #ifdef DEBUG
 #define st_d_print(...) \
-	do{ fprintf( stderr,"DEBUG:%s|%s<%d>\n",__FILE__, __FUNCTION__,__LINE__); \
+	do{ fprintf( stderr,"DEBUG:%s|%s<%d>:",__FILE__, __FUNCTION__,__LINE__); \
 		fprintf( stderr , __VA_ARGS__ ); \
 	}while(0)
 #define st_print(...) fprintf( stderr , __VA_ARGS__ )
@@ -45,7 +45,7 @@ static inline void backtrace_info(void)
 }
 
 #define SYS_ABORT(...)  \
-    do{ fprintf( stderr,"DIE:%s|%s<%d>\n",__FILE__, __FUNCTION__,__LINE__); \
+    do{ fprintf( stderr,"!!!DIE:%s|%s<%d>\n",__FILE__, __FUNCTION__,__LINE__); \
 		fprintf( stderr , __VA_ARGS__ ); \
         backtrace_info(); abort();    \
     }while(0)
