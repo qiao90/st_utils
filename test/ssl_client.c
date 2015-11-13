@@ -12,7 +12,9 @@
 
 static const char* CERT_FILE = "./ssl/local.pem";
 static const char* PKEY_FILE = "./ssl/local.key";
-static const char* CA_FILE   = "./ssl/cacert.pem";
+static const char* CA_FILE   = "";
+// Client NO CA, just verify!
+//static const char* CA_FILE   = "./ssl/cacert.pem";
 
 int main(int argc, char* argv[])
 {

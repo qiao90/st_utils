@@ -18,6 +18,8 @@
 #include <unistd.h>
 #include <sys/types.h>
 
+#include "st_others.h"
+
 typedef struct ssl_ctx_st SSL_CTX, *P_SSL_CTX;
 
 enum _ST_WORK_STATUS {
@@ -84,18 +86,46 @@ static inline void tls_rand_seed(void)
         ERR_print_errors_fp(stderr);    \
 	}while(0)
 
-#define EXIT_IF_TRUE(x) if (x)                                  \
+
+//// openSSL special
+
+#define EXIT_IF_TRUE_S(x) if (x)                                \
     do {                                                        \
-            fprintf(stderr, "!!!ASSERT,CHECK '%s' IS TRUE\n", #x);    \
-            ERR_print_errors_fp(stderr);                    \
-            SYS_ABORT(#x);                                  \
+            fprintf(stderr, "!!!%s:%d ASSERT '%s' IS TRUE\n",   \
+            __FILE__, __LINE__, #x);                            \
+            ERR_print_errors_fp(stderr);                        \
+            SYS_ABORT(#x);                                      \
     }while(0)  
 
-#define RET_NULL_IF_TRUE(x) if (x)                                  \
+#define RET_NULL_IF_TRUE_S(x) if (x)                            \
     do {                                                        \
-            fprintf(stderr, "!!!ASSERT,CHECK '%s' IS TRUE\n", #x);    \
-            ERR_print_errors_fp(stderr);                    \
-            return NULL;                                  \
+            fprintf(stderr, "!!!%s:%d ASSERT '%s' IS TRUE\n",   \
+            __FILE__, __LINE__, #x);                            \
+            ERR_print_errors_fp(stderr);                        \
+            return NULL;                                        \
     }while(0)  
+
+#define GOTO_IF_TRUE_S(x, flag) if (x)                          \
+    do {                                                        \
+            fprintf(stderr, "!!!%s:%d ASSERT '%s' IS TRUE\n",   \
+            __FILE__, __LINE__, #x);                            \
+            ERR_print_errors_fp(stderr);                        \
+            goto flag;                                          \
+    }while(0)
+
+
+
+typedef struct _st_RSA_AES_struct {
+    RSA     *p_pubkey;  //客户端用
+    RSA     *p_prikey;  //服务器用
+    char    aes_str[33];    //客户端产生
+} ST_RSA_AES_STRUCT, *P_ST_RSA_AES_STRUCT;
+P_ST_RSA_AES_STRUCT st_RSA_AES_setup_srv(const char* prikey_file,
+                                         const P_ST_SMALL_OBJ p_aes_obj);
+P_ST_RSA_AES_STRUCT st_RSA_AES_setup_cli(const char* pubkey_file,
+                                         P_ST_SMALL_OBJ p_aes_obj);
+ST_SMALL_POBJ st_AES_encrypt_S(const char* data, size_t len, P_ST_RSA_AES_STRUCT p_st);
+size_t st_AES_decrypt(char* data, size_t len, P_ST_RSA_AES_STRUCT p_st);
+void st_tls_test(void);
 
 #endif //_ST_OPENSSL_H_

@@ -4,7 +4,7 @@ void st_mutex_test_intra(void);
 void st_event_comsumer_test(void);
 void st_event_thread_test(void);
 void st_shm_test(void);
-
+void st_tls_test(void);
 
 int main(int argc, char* argv)
 {
@@ -14,5 +14,5 @@ int main(int argc, char* argv)
     //st_event_comsumer_test();
 
     //st_event_thread_test();
-    st_shm_test();
+    st_tls_test();
 }
