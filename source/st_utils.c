@@ -225,9 +225,12 @@ void st_utils_timer_test(void)
     st_add_timer(pt_srv, "TEST_TIMER2", 2000, 1, st_timer_test_handler, NULL);
     st_add_timer(pt_srv, "TEST_TIMER3", 1020, 1, st_timer_test_handler, "桃子大人");
     st_add_timer(pt_srv, "TEST_TIMER4", 3000, 1, st_timer_test_handler, NULL);
-    sleep(10);
+    sleep(7);
     st_remove_timer(pt_srv, "AAAAA");
     st_remove_timer(pt_srv, "TEST_TIMER1");
+    st_print("CND:%d\n", slist_count(&pt_srv->timer_objs));
+    st_remove_timer(pt_srv, "TEST_TIMER3");
+    st_print("CND:%d\n", slist_count(&pt_srv->timer_objs));
     sleep(10);
 
     while (1)

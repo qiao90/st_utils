@@ -53,6 +53,12 @@ static inline void slist_remove(P_SLIST_HEAD del_item, P_SLIST_HEAD head)
     if (!head || !del_item || slist_empty(head))
         return;
 
+    if ( head->next == del_item)
+    {
+        head->next = head->next->next;
+        return;
+    }
+
     slist_for_each(pos, head)
     {
         if ( pos->next == del_item)
