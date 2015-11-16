@@ -46,10 +46,27 @@ static inline int slist_empty(const P_SLIST_HEAD head)
 	return head->next == NULL;
 }
 
+static inline void slist_remove(P_SLIST_HEAD del_item, P_SLIST_HEAD head)
+{
+    P_SLIST_HEAD pos = NULL;
+
+    if (!head || !del_item || slist_empty(head))
+        return;
+
+    slist_for_each(pos, head)
+    {
+        if ( pos->next == del_item)
+        {
+            pos->next = pos->next->next;
+            return;
+        }
+    }
+}
+
 static inline unsigned int slist_count (const P_SLIST_HEAD head)
 {
 	int count = 0;
-	P_SLIST_HEAD pos;
+	P_SLIST_HEAD pos = NULL;
 
 	if(!head)
 		return -1;

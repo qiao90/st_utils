@@ -119,6 +119,8 @@ typedef struct _st_RSA_AES_struct {
     RSA     *p_pubkey;  //客户端用
     RSA     *p_prikey;  //服务器用
     char    aes_str[33];    //客户端产生
+    int     socket;     //保留对端的socket，用于更新密钥等操作
+    pthread_mutex_t mutex;
 } ST_RSA_AES_STRUCT, *P_ST_RSA_AES_STRUCT;
 P_ST_RSA_AES_STRUCT st_RSA_AES_setup_srv(const char* prikey_file,
                                          const P_ST_SMALL_OBJ p_aes_obj);

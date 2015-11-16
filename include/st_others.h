@@ -7,6 +7,10 @@
 #include <stdlib.h>
 #include <execinfo.h>
 
+typedef unsigned long ulong;
+typedef unsigned int  uint;
+typedef unsigned char uchar;
+
 #ifdef DEBUG
 #define st_d_print(...) \
 	do{ fprintf( stderr,"DEBUG:%s|%s<%d>:",__FILE__, __FUNCTION__,__LINE__); \
