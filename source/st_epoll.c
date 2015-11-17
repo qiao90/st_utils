@@ -51,7 +51,7 @@ int st_buildsocket(int listen_cnt, int port)
 	return lsocket;
 }
 
-static int st_make_nonblock(int lsocket)
+int st_make_nonblock(int lsocket)
 {
     int flags = 0;
 
@@ -62,7 +62,7 @@ static int st_make_nonblock(int lsocket)
     return 0;
 }
 
-static int st_add_new_event(int accepted_socket, P_EPOLL_STRUCT p_epoll)
+int st_add_new_event(int accepted_socket, P_EPOLL_STRUCT p_epoll)
 {
     struct epoll_event new_event;
 

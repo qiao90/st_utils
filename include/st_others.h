@@ -10,6 +10,7 @@
 typedef unsigned long ulong;
 typedef unsigned int  uint;
 typedef unsigned char uchar;
+typedef unsigned short ushort;
 
 #ifdef DEBUG
 #define st_d_print(...) \
