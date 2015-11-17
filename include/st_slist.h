@@ -6,7 +6,7 @@
 
 #include "st_others.h"
 
-//¸ù¾İlist_head¼ò»¯µÃµ½µÄµ¥ÏòNULL½áÎ²Á´±í
+//æ ¹æ®list_headç®€åŒ–å¾—åˆ°çš„å•å‘NULLç»“å°¾é“¾è¡¨
 typedef struct _slist_head {
 	struct _slist_head *next;
 } SLIST_HEAD, *P_SLIST_HEAD;
@@ -83,7 +83,7 @@ static inline unsigned int slist_count (const P_SLIST_HEAD head)
 	return count;
 }
 
-// ÏÈ½øÏÈ³öµÄ¶ÓÁĞ
+// å…ˆè¿›å…ˆå‡ºçš„é˜Ÿåˆ—
 static inline P_SLIST_HEAD slist_fetch(P_SLIST_HEAD head)
 {
     P_SLIST_HEAD ret = NULL;
@@ -178,7 +178,7 @@ static inline int slist_u_test(void)
     }
     free(p_node);
 
-    //²âÊÔ£¬²»¹ØĞÄÄÚ´æĞ¹Â©
+    //æµ‹è¯•ï¼Œä¸å…³å¿ƒå†…å­˜æ³„æ¼
     pos = slist_fetch(p_test_head); //90
     pos = slist_fetch(p_test_head); //80
     pos = slist_fetch(p_test_head); //70

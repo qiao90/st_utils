@@ -1,240 +1,197 @@
 #include "st_others.h"
-#include "st_slist.h"
 #include "st_utils.h"
 
-/** 
- * 使用epoll timerfd实现定时器 
- * 传统的signal方式只能实现一个定时器，而posix 
- * timer由于也是用信号实现，会对现有的其他基于信号的函数产生干扰
- */
+#include <string.h>
+#include <iconv.h>
+#include <ctype.h>
 
+#define MAX_LINE 2048
 
-static void* st_timer_service(void *data)
+//删除buf语句开头和结尾的空白字符
+void st_strip(char* buf, size_t len)
 {
-    P_ST_TIMER_SRV pt_srv = (P_ST_TIMER_SRV)data;
-    uint64_t dumy_value;
-    P_ST_TIMER_OBJ p_node = NULL;
+	char tmp_buf[MAX_LINE];
+	char* ptr = NULL,* p_end = NULL;
+	size_t l_len = (len+1) > MAX_LINE ? (len+1) : MAX_LINE;
 
-    int ready = 0, e_i = 0;
+	if(!buf || strlen(buf) < 1)
+		return;
 
-    st_print("st_timer_service running...\n");
+	strncpy(tmp_buf, buf, l_len);
 
-    for ( ; ; )
-    {
-        ready = epoll_wait(pt_srv->event_fd, pt_srv->p_events, 
-                           pt_srv->max_timers, -1); 
-        for (e_i = 0; e_i < ready; e_i++)
-        {
-            // NEED TO BE DUMMY READ
-            read(pt_srv->p_events[e_i].data.fd, &dumy_value, 8);
-            //调用处理函数，由于处理函数时间不知道，所以，嘿嘿。。。
-            slist_for_each_entry(p_node, &pt_srv->timer_objs, list)
-            {
-                if (p_node->timer_fd == pt_srv->p_events[e_i].data.fd)
-                {
-                    if (p_node->handler)
-                    {
-                        (*p_node->handler)(p_node);
-                    }
-                    else
-                    {
-                        st_print("!!!!! NULL HANDLER FOR %s<%d>", 
-                                 p_node->timer_name, p_node->timer_fd); 
-                    }
-                }
-            }
-        }
-    }
+	ptr = tmp_buf + len - 1;
+	while(ptr >= tmp_buf)
+	{
+		if(isspace(* ptr))
+			ptr --;
+		else
+			break;
+	}
 
-    st_print("st_timer_service terminated...\n");
+	p_end = ptr;
+	*(p_end+1) = '\0';
+
+	ptr = tmp_buf;
+	while(ptr <= p_end)
+	{
+		if(isspace(* ptr))
+			ptr ++;
+		else
+			break;
+	}
+
+	strncpy(buf, ptr, l_len);
+
+	return;
 }
 
-
-P_ST_TIMER_SRV st_create_timer_service(int max_timers)
+int st_getline(char* buf, FILE* fp)
 {
-    P_ST_TIMER_SRV pt_srv = 
-        (P_ST_TIMER_SRV)malloc(sizeof(ST_TIMER_SRV));
+	static char dirty[MAX_LINE];
+	int ret = 0;
 
-    RET_NULL_IF_TRUE(!pt_srv);
-    memset(pt_srv, 0, sizeof(ST_TIMER_SRV));
-    pt_srv->max_timers = max_timers;
-    pthread_mutex_init(&pt_srv->mutex, NULL); 
-    pt_srv->event_fd = epoll_create (max_timers);
-    pt_srv->p_events = 
-        (struct epoll_event*)calloc (max_timers, sizeof(struct epoll_event));  
-    if ( !pt_srv->p_events)
+	if(!buf || !fp)
+		return -1;
+
+	memset(buf, 0, MAX_LINE);
+	if( fgets( buf, MAX_LINE, fp ) == NULL)
+	{
+		if( feof(fp) )
+			return 0;
+		else
+			return -1;
+	}
+
+	if(buf[MAX_LINE-2] == '\n' || buf[MAX_LINE-2] == '\0')
+		return 1;
+
+	do{
+		memset(dirty, 0, MAX_LINE);
+		if(fgets(dirty, MAX_LINE, fp))
+		{
+			if(dirty[MAX_LINE-2] == '\0' || dirty[MAX_LINE-2] == '\n')
+				break;
+		}
+		else
+			break;
+	}while(1);
+
+	return 1;
+}
+
+static char* code_convert(char* src, int size   , 
+                          const char* tocode, const char* fromcode)
+{
+    char*  in_buf = NULL; char* p_in = NULL;
+    char*  out_buf = NULL; char* p_out = NULL;
+    size_t in_len = strlen(src);
+    size_t out_len = in_len * 4;
+    size_t conv_cnt = 0;
+    iconv_t cd = 0;
+
+    if (!src || !tocode || !fromcode)
+        return NULL;
+
+    in_buf = strdup(src);
+    if (!in_buf)
+        return NULL;
+    out_buf = (char *)malloc(out_len); 
+    if (!out_buf)
     {
-        free(pt_srv);
+        free(in_buf);
         return NULL;
     }
-    memset(pt_srv->p_events, 0, max_timers*sizeof(struct epoll_event));
-    // NULL for timer_objs
+    p_in = in_buf;
+    p_out = out_buf;
 
-    if(pthread_create(&(pt_srv->pid), NULL,
-                          st_timer_service, pt_srv) != 0) 
-        goto failed;
+    // 忽略输入中非法的字符。测试过程中有这种情况，看实际的效果
+    GOTO_IF_TRUE ( (cd = iconv_open(tocode, fromcode)) == (iconv_t)-1, failed);
     
-    return pt_srv;
+    memset(out_buf, 0, out_len);
+    conv_cnt = iconv(cd, &p_in, &in_len, &p_out, &out_len);
+    iconv_close(cd);
 
-failed:
-    if (pt_srv && pt_srv->p_events)
+    //Perfect ONE
+    if ( conv_cnt == 0 && strlen(out_buf) < size)
     {
-        free(pt_srv->p_events);
-        pthread_mutex_destroy(&pt_srv->mutex);
+        //st_print("GOOD: code_convert(%s->%s)[%s]", 
+        //fromcode, tocode, out_buf);
+        memset(src, 0, size);
+        strcpy(src, out_buf);
     }
-    if (pt_srv)
-        free(pt_srv);
-    return NULL; 
-}
-
-P_ST_TIMER_OBJ st_add_timer(P_ST_TIMER_SRV pt_srv,
-                          const char* t_name, time_t msec, int repeatible, 
-                          void* (*handler)(P_ST_TIMER_OBJ pt_obj), void* data)
-{
-    struct epoll_event new_event;
-    P_ST_TIMER_OBJ pt_obj = NULL;
-    struct itimerspec itv;
-    struct timespec   now;
-
-    if (!t_name || msec == 0 || !handler)
-        return NULL;
-
-    if (slist_count(&pt_srv->timer_objs) >= pt_srv->max_timers)
+    else if ( strlen(out_buf) > 0)
     {
-        st_print("MAX TIMER(%d), UNABLE TO ADD!\n");
-        return NULL;
-    }
-
-    pt_obj = (P_ST_TIMER_OBJ)malloc(sizeof(ST_TIMER_OBJ));
-    RET_NULL_IF_TRUE(!pt_obj);
-
-    memset(pt_obj, 0, sizeof(ST_TIMER_OBJ));
-    strncpy(pt_obj->timer_name, t_name, NAME_MAX);
-    pt_obj->handler = handler;
-    pt_obj->data = data; 
-    pt_obj->repeatible = repeatible;
-    pt_obj->m_sec = msec;
-    pt_obj->timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
-
-    new_event.data.fd = pt_obj->timer_fd;
-    new_event.events = EPOLLIN | EPOLLET;;
-
-     // add timer
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    memset(&itv, 0, sizeof(struct itimerspec));
-    itv.it_value.tv_sec = now.tv_sec + msec/1000;
-    itv.it_value.tv_nsec = now.tv_nsec + (msec%1000)*1000*1000;
-    if (itv.it_value.tv_nsec >= 1000*1000*1000)
-    {
-        ++itv.it_value.tv_sec;
-        itv.it_value.tv_nsec -= 1000*1000*1000;
-    }
-    if (repeatible)
-    {
-        itv.it_interval.tv_sec = msec / 1000; 
-        itv.it_interval.tv_nsec = (msec%1000)*1000*1000;
-    }
-
-
-    pthread_mutex_lock(&pt_srv->mutex);
-    epoll_ctl (pt_srv->event_fd, EPOLL_CTL_ADD, 
-               pt_obj->timer_fd, &new_event);
-   
-    timerfd_settime(pt_obj->timer_fd, TFD_TIMER_ABSTIME, &itv, NULL);
-    pthread_mutex_unlock(&pt_srv->mutex);
-
-    slist_add(&pt_obj->list, &pt_srv->timer_objs);
-
-
-    st_print("ADDING TIMER %s:%d ms OK!\n", pt_obj->timer_name,
-             pt_obj->m_sec);
-
-    return pt_obj;
-   
-}
-
-P_ST_TIMER_SRV st_remove_timer(P_ST_TIMER_SRV pt_srv,
-                          const char* t_name)
-{
-    P_ST_TIMER_OBJ pt_obj = NULL;
-    P_ST_TIMER_OBJ p_node = NULL;
-
-    if (!pt_srv || !t_name || !strlen(t_name))
-        return NULL;
-
-    slist_for_each_entry(p_node, &pt_srv->timer_objs, list)
-    {
-        if ( !strncmp(p_node->timer_name, t_name, strlen(t_name)))
-            break;
-    }
-
-    if (p_node)
-    {
-        pthread_mutex_lock(&pt_srv->mutex);
-        close(p_node->timer_fd); //when close, will auto rm from events
-        slist_remove(&p_node->list, &pt_srv->timer_objs);
-        free(p_node);
-        pthread_mutex_unlock(&pt_srv->mutex);
-        st_print("TIMER %s removed!\n", t_name);
-        return pt_srv;
+        st_print("WARNING: code_convert(%s->%s)[%s]", 
+                 fromcode, tocode, out_buf);
+        memset(src, 0, size);
+        strcpy(src, out_buf);
     }
     else
     {
-        st_print("!!!TIMER %s not found!\n", t_name);
-        return NULL;
+        st_print("ERROR: code_convert(%s->%s)[%s]", 
+                 fromcode, tocode, src);
+        goto failed;
     }
+    free(in_buf);
+    free(out_buf);
+    return src;
+
+failed:
+    free(in_buf);
+    free(out_buf);
+    return NULL;
 }
 
-void st_destroy_timers(P_ST_TIMER_SRV pt_srv)
+// 以下两个函数是字符编码的转换，如果转换成功，传入的地址
+// 的内容将会被更新，同时被return返回，否则原先的内容不会
+// 被改变，返回NULL
+char* utf8_to_gbk(char *strUTF8, int size)
 {
-    if (!pt_srv)
-        return NULL;
+    return code_convert(strUTF8, size, "GBK//IGNORE", "UTF-8");
+}
 
-    P_ST_TIMER_OBJ p_node = NULL;
-    slist_for_each_entry(p_node, &pt_srv->timer_objs, list)
+char* gbk_to_utf8(char *strGBK, int size)
+{
+    return code_convert(strGBK, size,"UTF-8//IGNORE", "GBK" );
+}
+
+
+
+void utf8_gbk_test(void)
+{
+    //char buf[512] = "外边的字到底怎么为什么有的时候通不过呢";
+    //utf8_to_gbk(buf, sizeof(buf));
+    //gbk_to_utf8(buf, sizeof(buf));
+
+    char line[MAX_LINE];
+    int ret = 0;
+    FILE* fp = fopen("input.txt","r");
+    FILE* fp_gbk = fopen("out.gbk", "w");
+
+    rewind(fp);
+    while((ret = st_getline(line, fp)) > 0)
+	{
+        utf8_to_gbk(line, MAX_LINE);
+        fputs(line, fp_gbk);
+    }
+    fclose(fp);
+    fclose(fp_gbk);
+
+    fp_gbk = fopen("out.gbk", "r");
+    FILE* fp_utf8 = fopen("out.utf8", "w");
+    rewind(fp_gbk);
+    while((ret = st_getline(line, fp_gbk)) > 0)
     {
-        close(p_node->timer_fd); //when close, will auto rm from events
-        slist_remove(&p_node->list, &pt_srv->timer_objs);
-        free(p_node);
+        gbk_to_utf8(line, MAX_LINE);
+        fputs(line, fp_utf8);
     }
 
-    free(pt_srv);
+
+    fclose(fp_gbk);
+    fclose(fp_utf8);
+
+    st_print("TEST TERMINATED!\n");
 
     return;
 }
 
-static void* st_timer_test_handler(P_ST_TIMER_OBJ pt_obj)
-{
-    if (! pt_obj->data)
-        st_print("%s Handler with data == NULL \n",
-                 pt_obj->timer_name); 
-    else
-        st_print("%s Handler with data == %s \n",
-                 pt_obj->timer_name, (char *)pt_obj->data);
-
-    return NULL;
-}
-
-///// TEST
-void st_utils_timer_test(void)
-{
-    P_ST_TIMER_SRV pt_srv = 
-        st_create_timer_service(3);
-
-    st_add_timer(pt_srv, "TEST_TIMER1", 1000, 1, st_timer_test_handler, "T1");
-    st_add_timer(pt_srv, "TEST_TIMER2", 2000, 1, st_timer_test_handler, NULL);
-    st_add_timer(pt_srv, "TEST_TIMER3", 1020, 1, st_timer_test_handler, "桃子大人");
-    st_add_timer(pt_srv, "TEST_TIMER4", 3000, 1, st_timer_test_handler, NULL);
-    sleep(7);
-    st_remove_timer(pt_srv, "AAAAA");
-    st_remove_timer(pt_srv, "TEST_TIMER1");
-    st_print("CND:%d\n", slist_count(&pt_srv->timer_objs));
-    st_remove_timer(pt_srv, "TEST_TIMER3");
-    st_print("CND:%d\n", slist_count(&pt_srv->timer_objs));
-    sleep(10);
-
-    while (1)
-    {
-        sleep(1);
-    }
-}

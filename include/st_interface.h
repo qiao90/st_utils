@@ -34,11 +34,11 @@ int st_buildsocket(int listen_cnt, int port);
 
 typedef struct _st_memmap_t
 {    	
-    void*   location;   //Ó³ÉäµÃµ½µÄÄÚ´æµØÖ·
-    int	    fd;	        //ÎÄ¼ş²Ù×÷¾ä±ú
-    size_t	size;	    //×î´óÓ³Éä´óĞ¡
-    char    filename[PATH_MAX]; //Ó³Éäµ½ÎïÀí´ÅÅÌÎÄ¼ş
-    char    mapname[PATH_MAX];  //mapµÄÃû×Ö£¬ÀıÈç RPCShareµÈ
+    void*   location;   //æ˜ å°„å¾—åˆ°çš„å†…å­˜åœ°å€
+    int	    fd;	        //æ–‡ä»¶æ“ä½œå¥æŸ„
+    size_t	size;	    //æœ€å¤§æ˜ å°„å¤§å°
+    char    filename[PATH_MAX]; //æ˜ å°„åˆ°ç‰©ç†ç£ç›˜æ–‡ä»¶
+    char    mapname[PATH_MAX];  //mapçš„åå­—ï¼Œä¾‹å¦‚ RPCShareç­‰
 } ST_MEMMAP_T, * P_ST_MEMMAP_T;
 
 void* st_memmap_create(const char* filename, const char* share_name, size_t max_size);
@@ -56,10 +56,10 @@ void st_memmap_test(void);
 	   
 typedef struct _st_shm_t
 {    	
-    void*   location;   //Ó³ÉäµÃµ½µÄÄÚ´æµØÖ·
+    void*   location;   //æ˜ å°„å¾—åˆ°çš„å†…å­˜åœ°å€
 	int		fd;
-    size_t	size;	    //×î´óÓ³Éä´óĞ¡  PAGE_SIZE  SHMMAX  
-    char    shmname[NAME_MAX];  //mapµÄÃû×Ö£¬ÀıÈç RPCShareµÈ
+    size_t	size;	    //æœ€å¤§æ˜ å°„å¤§å°  PAGE_SIZE  SHMMAX  
+    char    shmname[NAME_MAX];  //mapçš„åå­—ï¼Œä¾‹å¦‚ RPCShareç­‰
 } ST_SHM_T, * P_ST_SHM_T;
 
 void* st_shm_create(const char* share_name, size_t max_size);
@@ -92,7 +92,7 @@ void DeleteCriticalSection(LPCRITICAL_SECTION section);
 
 // Mutex
 
-//ÎªÁËÊµÏÖWait Close ½Ó¿ÚµÄÍ³Ò»£¬ÒÔ¼°½«À´Í¬²½·½Ê½µÄÀ©Õ¹
+//ä¸ºäº†å®ç°Wait Close æ¥å£çš„ç»Ÿä¸€ï¼Œä»¥åŠå°†æ¥åŒæ­¥æ–¹å¼çš„æ‰©å±•
 enum SYNC_TYPE 
 {
     SYNC_MUTEX,
@@ -117,7 +117,7 @@ HANDLE CreateMutex( void* lpMutexAttributes,
                 BOOL bInitialOwner, const char* lpName);
 HANDLE OpenMutex( DWORD dwDesiredAccess,
                 BOOL bInheritHandle, const char* lpName);
-//Èç¹û³¬Ê±£¬·µ»ØETIMEDOUT
+//å¦‚æœè¶…æ—¶ï¼Œè¿”å›ETIMEDOUT
 DWORD  WaitForSingleObject(HANDLE hHandle,
                 DWORD dwMilliseconds);
 BOOL  ReleaseMutex(HANDLE hMutex);
@@ -131,7 +131,7 @@ HANDLE CreateEvent(void* lpEventAttributes,
 HANDLE WINAPI OpenEvent( DWORD dwDesiredAccess,
                          BOOL bInheritHandle, const char* lpName );
 BOOL ResetEvent( HANDLE hEvent);
-// Èç¹ûÒÑ¾­ÓĞÊÂ¼şÁË£¬¾Í·µ»ØEBUSY£¬²»Êµ¼ÊÔÙ·¢ËÍ
+// å¦‚æœå·²ç»æœ‰äº‹ä»¶äº†ï¼Œå°±è¿”å›EBUSYï¼Œä¸å®é™…å†å‘é€
 BOOL SetEvent( HANDLE hEvent);
 
 

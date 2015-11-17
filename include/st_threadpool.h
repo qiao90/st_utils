@@ -23,7 +23,7 @@ typedef struct _st_thread {
     SLIST_HEAD list;
     enum THREAD_STATUS status; //
     pthread_t  pid;
-    time_t     start;//µÇ¼ÇÈÎÎñ¿ªÊ¼µÄÊ±¼ä
+    time_t     start;//ç™»è®°ä»»åŠ¡å¼€å§‹çš„æ—¶é—´
 } ST_THREAD, *P_ST_THREAD;
 
 typedef struct _st_tasks {
@@ -38,8 +38,8 @@ typedef struct _st_thread_manage {
     volatile int thread_running;
     volatile int thread_dead;
     pthread_t    manage_pid;
-    SLIST_HEAD   threads;   // threadsµÄ½á¹¹²»»á±»Íâ²¿·ÃÎÊ£¬²»ĞèÒª±£»¤
-    SLIST_HEAD   tasks;     // ĞèÒª±£»¤²Ù×÷£¬ÈÎºÎÏß³Ì¶¼¿ÉÒÔÌí¼ÓÈÎÎñ
+    SLIST_HEAD   threads;   // threadsçš„ç»“æ„ä¸ä¼šè¢«å¤–éƒ¨è®¿é—®ï¼Œä¸éœ€è¦ä¿æŠ¤
+    SLIST_HEAD   tasks;     // éœ€è¦ä¿æŠ¤æ“ä½œï¼Œä»»ä½•çº¿ç¨‹éƒ½å¯ä»¥æ·»åŠ ä»»åŠ¡
     pthread_mutex_t tk_mutex;
     pthread_cond_t  tk_cond;
 } ST_THREAD_MANAGE, *P_ST_THREAD_MANAGE;
