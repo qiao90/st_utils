@@ -24,6 +24,12 @@ typedef unsigned short ushort;
 #define st_print(...) fprintf( stderr , __VA_ARGS__ )
 #endif
 
+#define st_d_error(...) \
+	do{ perror("ERROR:");	\
+		fprintf( stderr,"DEBUG:%s|%s<%d>:",__FILE__, __FUNCTION__,__LINE__); \
+		fprintf( stderr , __VA_ARGS__ ); \
+	}while(0)
+
 typedef struct _st_small_obj {
     char    data[2048];
     size_t  len;
