@@ -40,6 +40,10 @@ typedef struct _st_tls_ctx_struct {
 P_ST_TLS_STRUCT st_tls_create_ctx(P_ST_TLS_STRUCT p_st_tls);
 SSL* st_tls_create_ssl(P_ST_TLS_STRUCT p_st_tls, int sock);
 void st_tls_destroy(P_ST_TLS_STRUCT p_st_tls);
+static X509 *st_tls_load_cert(const char *file);
+int st_tls_verify_cert_with_CA(const char* certfile, X509* certX, const char* CAfile, 
+				STACK_OF(X509) *tchain, STACK_OF(X509_CRL) *crls);
+X509* st_tls_build_cert_from_str_S(const char* pemCertString);
 
 static inline void tls_rand_seed_uniquely(void)
 {

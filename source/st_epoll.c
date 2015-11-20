@@ -27,6 +27,12 @@ int st_buildsocket(int listen_cnt, int port)
         return -1;
     }
 
+	int flag = 1;
+	if( setsockopt(lsocket, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag)) == -1 )
+	{
+		st_print("setsockopt Error!\n");
+        return -1;
+	}
 
 	struct sockaddr_in svraddr;
 	svraddr.sin_family = AF_INET;

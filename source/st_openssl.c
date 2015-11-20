@@ -3,7 +3,7 @@
 
 #include <openssl/md5.h>
 #include <openssl/aes.h>
-
+#include <openssl/x509v3.h>
 #include <stdio.h>
 
 P_ST_TLS_STRUCT st_tls_create_ctx(P_ST_TLS_STRUCT p_st_tls)
@@ -126,10 +126,215 @@ void st_tls_destroy(P_ST_TLS_STRUCT p_st_tls)
         SSL_CTX_free(p_st_tls->p_ctx); 
 }
 
-// 用根证书来验证用户证书，成功返回0，失败!0
-int st_tls_verify_cert_with_CA(void)
+static X509 *st_tls_load_cert(const char *file)
 {
-    return -1;
+    X509 *x=NULL;
+    BIO *cert;
+
+    if ((cert=BIO_new(BIO_s_file())) == NULL)
+        goto end;
+
+    if (BIO_read_filename(cert,file) <= 0)
+        goto end;
+
+    x=PEM_read_bio_X509_AUX(cert,NULL, NULL, NULL);
+end:
+    if (cert != NULL) BIO_free(cert);
+    return(x);
+}
+
+X509* st_tls_build_cert_from_str_S(const char* pemCertString)
+{
+	if(!pemCertString)
+		return NULL;
+	
+	size_t certLen = strlen(pemCertString);
+	BIO* certBio = BIO_new(BIO_s_mem());
+    BIO_write(certBio, pemCertString, certLen);
+    
+	X509* certX509 = PEM_read_bio_X509(certBio, NULL, NULL, NULL);
+    if (!certX509) 
+        st_ssl_error("unable to parse certificate in memory\n");
+
+    BIO_free(certBio);
+	
+	return certX509;
+}
+
+// 用根证书来验证用户证书，成功返回1，失败0
+// certfile 和 certStr不能同时指定
+// 可不可以直接字符串比较certificate和issuer ？？？？
+int st_tls_verify_cert_with_CA(const char* certfile, X509* certX, const char* CAfile, 
+				STACK_OF(X509) *tchain, STACK_OF(X509_CRL) *crls)
+{
+	const int SHA1LEN = 20;
+	int ret 		= 0, i = 0;
+	X509 		*x 	= NULL;
+    X509_STORE  *store = NULL;
+	X509_STORE_CTX *csc = NULL;
+    X509_LOOKUP *lookup = NULL;
+	unsigned char	x_finger[SHA1LEN];
+	unsigned char	x_finger_s[SHA1LEN*2 +1];
+	unsigned int	len = 0;
+	
+	if(!CAfile || (!certfile && !certX) || (certfile && certX))
+	{
+		st_d_print("Invalid argument!");
+		return -1;
+	}
+	
+	GOTO_IF_TRUE ( !(store = X509_STORE_new()), end);
+
+	OpenSSL_add_all_algorithms();
+	
+	// 自检CA证书的合法性 
+	GOTO_IF_TRUE ( !(x = st_tls_load_cert(CAfile)), end);
+	if( (i = X509_check_ca(x)) == 0)
+	{
+		st_ssl_error("Invalid Root CA %s!\n", CAfile);
+		X509_free(x);
+		return 0;
+	}
+	else
+	{
+		st_print("Root CA type:%d\n", i);
+		X509_free(x);
+	}
+	
+	// 加载CA证书
+    GOTO_IF_TRUE ( !(lookup = X509_STORE_add_lookup(store, X509_LOOKUP_file())), end);
+	if (!X509_LOOKUP_load_file(lookup, CAfile, X509_FILETYPE_PEM))
+	{
+		st_ssl_error("Error loading file %s\n", CAfile);
+        goto end;
+	}
+	
+	// 如果是文件验证
+	if(!certX)
+	{
+		GOTO_IF_TRUE ( !(x = st_tls_load_cert(certfile)), end);
+		GOTO_IF_TRUE ( !(csc = X509_STORE_CTX_new()), end_2);
+	}
+	else
+		x = certX;
+	
+	// 计算证书指纹，方便作为数据库主键的其它操作
+	const EVP_MD *digest = EVP_sha1();
+	i = X509_digest(x, digest, (unsigned char*) x_finger, &len);
+	GOTO_IF_TRUE ( (i == 0 || len != SHA1LEN), end_2);
+	memset(x_finger_s, 0, sizeof(x_finger_s));
+	for(i=0; i < len; i++) { 
+		char *l = (char*) (2*i +  x_finger_s); 
+		sprintf(l, "%02X", x_finger[i]); 
+	} 
+	st_print("FINGER SHA1:%s\n", x_finger_s);
+	
+	// 计算验证证书的有效日期
+	//x509_check_cert_time
+	
+	X509_STORE_set_flags(store, 0);	//?
+    GOTO_IF_TRUE ( !X509_STORE_CTX_init(csc, store, x, 0/*untrust chain*/), end_3)	;//最后添加代验证的证书
+	
+	if (tchain)	/*trust chain*/
+        X509_STORE_CTX_trusted_stack(csc, tchain);
+    if (crls)	/*revoke chain*/
+        X509_STORE_CTX_set0_crls(csc, crls);
+	
+    i = X509_verify_cert(csc);
+	if(i > 0)
+	{
+		ret = 1; // OK
+		st_print("Verify OK!\n");
+		
+		int j, k;
+		int Nid = 0;
+		STACK_OF(X509) *chain = X509_STORE_CTX_get1_chain(csc);
+		
+	    for (j = 0; j < sk_X509_num(chain); j++) 
+		{
+			X509 *cert = sk_X509_value(chain, j);
+			char test_buf[256];
+			X509_NAME* subject = X509_get_subject_name(cert);
+			// subject MUST NOT be freed
+			if ( X509_NAME_get_text_by_NID(subject, NID_organizationName, test_buf, sizeof(test_buf)) > 0)
+				st_print("NID_organizationName=>%s\n", test_buf);
+#if 0			
+			char subj  [1024+1];
+			char issuer[1024+1];
+			X509_NAME_oneline(X509_get_subject_name(cert), subj, 1024);
+			X509_NAME_oneline(X509_get_issuer_name(cert), issuer, 1024);
+			st_print("certificate: %s\n", subj);
+			st_print("\tissuer: %s\n\n", issuer);
+#endif
+			
+#if 0			
+			X509_NAME* subject = X509_get_subject_name(cert);
+			X509_NAME_ENTRY *entry = NULL;
+			int entry_cnt = sk_X509_NAME_ENTRY_num(subject->entries);
+			
+			for (k=0; k< entry_cnt; k++)
+			{
+				entry = sk_X509_NAME_ENTRY_value(subject->entries,k);
+				Nid = OBJ_obj2nid(entry->object);
+				switch(Nid)
+				{
+					case NID_countryName://国家C
+						write(1,"国家：", strlen("国家："));
+						write(1, entry->value->data, entry->value->length); write(1,"\n",1);
+						break;
+					case NID_stateOrProvinceName://省ST
+						write(1,"省：", strlen("省："));
+						write(1, entry->value->data, entry->value->length); write(1,"\n",1);
+						break;
+					case NID_localityName://地区L
+						write(1,"地区：", strlen("地区："));
+						write(1, entry->value->data, entry->value->length); write(1,"\n",1);
+						break;
+					case NID_organizationName://组织O
+						write(1,"组织：", strlen("组织："));
+						write(1, entry->value->data, entry->value->length); write(1,"\n",1);
+						break;
+					case NID_organizationalUnitName://单位OU
+						write(1,"单位：", strlen("单位："));
+						write(1, entry->value->data, entry->value->length); write(1,"\n",1);
+						break;
+					case NID_commonName://通用名CN
+						write(1,"通用名：", strlen("通用名："));
+						write(1, entry->value->data, entry->value->length); write(1,"\n",1);
+						break;
+					case NID_pkcs9_emailAddress://Mail
+						write(1,"EMAIL：", strlen("EMAIL："));
+						write(1, entry->value->data, entry->value->length); write(1,"\n",1);
+						break;
+					default:
+						break;
+				}
+			}
+			//st_print("depth=%d: \n", j);
+			//X509_NAME_print_ex_fp(stderr,
+			//	      X509_get_subject_name(cert),
+			//	      0, XN_FLAG_ONELINE);
+			
+			st_print("\n");
+#endif	   			
+	    } 
+		sk_X509_pop_free(chain, X509_free);
+	}
+	else
+	{
+		st_ssl_error("Verify Failed!\n");
+	}
+	
+end_3:
+    X509_STORE_CTX_free(csc);
+end_2:
+	if(!certX)	//的确是文件加载的
+		X509_free(x);
+end:
+	if(store)
+		X509_STORE_free(store);	
+	
+    return ret;
 }
 
 // RSA加密的时候，使用参数RSA_PKCS1_PADDING时，明文长度不能大于密文长度-11
