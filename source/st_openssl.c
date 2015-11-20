@@ -213,10 +213,13 @@ int st_tls_verify_cert_with_CA(const char* certfile, X509* certX, const char* CA
 	if(!certX)
 	{
 		GOTO_IF_TRUE ( !(x = st_tls_load_cert(certfile)), end);
-		GOTO_IF_TRUE ( !(csc = X509_STORE_CTX_new()), end_2);
 	}
 	else
+	{
 		x = certX;
+	}
+		
+	GOTO_IF_TRUE ( !(csc = X509_STORE_CTX_new()), end_2);
 	
 	// 计算证书指纹，方便作为数据库主键的其它操作
 	const EVP_MD *digest = EVP_sha1();

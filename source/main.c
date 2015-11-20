@@ -7,7 +7,7 @@ void st_event_thread_test(void);
 void st_shm_test(void);
 void st_tls_test(void);
 
-const char* pem_str = "-----BEGIN CERTIFICATE-----\
+const char* pem_str = "-----BEGIN CERTIFICATE-----\n\
 MIIEJjCCAw6gAwIBAgIBATANBgkqhkiG9w0BAQsFADCBnTELMAkGA1UEBhMCQ04x\n\
 EjAQBgNVBAgMCUd1YW5nZG9uZzERMA8GA1UEBwwIU2hlbnpoZW4xFTATBgNVBAoM\n\
 DEZyZWVTaWduIEx0ZDEMMAoGA1UECwwDUiZEMRwwGgYDVQQDDBNmZWRvcmEuZnJl\n\
@@ -44,7 +44,9 @@ int main(int argc, char* argv)
     //st_event_thread_test();
     //st_tls_test();
 	
-	//st_tls_verify_cert_with_CA("./ssl/test.crt", NULL,  "./ssl/cacert.pem", 0, 0);
+	
+	st_tls_verify_cert_with_CA("./ssl/test.crt", NULL,  "./ssl/cacert.pem", 0, 0);
+	
 	X509* certX = st_tls_build_cert_from_str_S(pem_str);
 	st_tls_verify_cert_with_CA( NULL, certX, "./ssl/cacert.pem", 0, 0);
 	
