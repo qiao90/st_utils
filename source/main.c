@@ -6,6 +6,8 @@ void st_event_comsumer_test(void);
 void st_event_thread_test(void);
 void st_shm_test(void);
 void st_tls_test(void);
+void st_utils_timer_test(void);
+void utf8_gbk_test(void);
 
 const char* pem_str = "-----BEGIN CERTIFICATE-----\n\
 MIIEJjCCAw6gAwIBAgIBATANBgkqhkiG9w0BAQsFADCBnTELMAkGA1UEBhMCQ04x\n\
@@ -44,6 +46,7 @@ int main(int argc, char* argv)
     //st_event_thread_test();
     //st_tls_test();
 	
+	//utf8_gbk_test(); 
 	
 	st_tls_verify_cert_with_CA("./ssl/test.crt", NULL,  "./ssl/cacert.pem", 0, 0);
 	
@@ -51,4 +54,7 @@ int main(int argc, char* argv)
 	st_tls_verify_cert_with_CA( NULL, certX, "./ssl/cacert.pem", 0, 0);
 	
 	X509_free(certX);
+	
+	
+    //st_utils_timer_test();
 }

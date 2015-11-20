@@ -7,6 +7,11 @@
 #include <stdlib.h>
 #include <execinfo.h>
 
+typedef unsigned long ulong;
+typedef unsigned int  uint;
+typedef unsigned char uchar;
+typedef unsigned short ushort;
+
 #ifdef DEBUG
 #define st_d_print(...) \
 	do{ fprintf( stderr,"DEBUG:%s|%s<%d>:",__FILE__, __FUNCTION__,__LINE__); \
@@ -18,6 +23,12 @@
 	do {} while(0)
 #define st_print(...) fprintf( stderr , __VA_ARGS__ )
 #endif
+
+#define st_d_error(...) \
+	do{ perror("ERROR:");	\
+		fprintf( stderr,"DEBUG:%s|%s<%d>:",__FILE__, __FUNCTION__,__LINE__); \
+		fprintf( stderr , __VA_ARGS__ ); \
+	}while(0)
 
 typedef struct _st_small_obj {
     char    data[2048];

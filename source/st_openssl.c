@@ -4,6 +4,7 @@
 #include <openssl/md5.h>
 #include <openssl/aes.h>
 #include <openssl/x509v3.h>
+#include <pthread.h>
 #include <stdio.h>
 
 P_ST_TLS_STRUCT st_tls_create_ctx(P_ST_TLS_STRUCT p_st_tls)
@@ -356,6 +357,7 @@ P_ST_RSA_AES_STRUCT st_RSA_AES_setup_srv(const char* prikey_file,
         return NULL;
 
     memset(p_st, 0, sizeof(ST_RSA_AES_STRUCT));
+    pthread_mutex_init(&p_st->mutex, NULL);
     GOTO_IF_TRUE( !(fp = fopen(prikey_file, "r")), failed );
 
     //RSA_private_decrypt RSA_PKCS1_PADDING
@@ -378,6 +380,7 @@ fail_2:
     fclose(fp);
     RSA_free(p_st->p_prikey);
 failed:
+    pthread_mutex_destroy(&p_st->mutex);
     free(p_st);
     return NULL;
 
@@ -414,6 +417,7 @@ P_ST_RSA_AES_STRUCT st_RSA_AES_setup_cli(const char* pubkey_file,
         return NULL;
 
     memset(p_st, 0, sizeof(ST_RSA_AES_STRUCT));
+    pthread_mutex_init(&p_st->mutex, NULL);
     GOTO_IF_TRUE( !(fp = fopen(pubkey_file, "r")), failed );
 
 
@@ -452,8 +456,20 @@ fail_2:
     fclose(fp);
     RSA_free(p_st->p_pubkey);
 failed:
+    pthread_mutex_destroy(&p_st->mutex);
     free(p_st);
     return NULL;
+}
+
+void st_RSA_AES_destroy(P_ST_RSA_AES_STRUCT p_aes_obj)
+{
+    if (!p_aes_obj)
+        return;
+
+    RSA_free(p_aes_obj->p_pubkey);
+    pthread_mutex_destroy(&p_aes_obj->mutex);
+    free(p_aes_obj);
+    return; 
 }
 
 // 由于加密的数据肯定比原来的数据长，所以不覆盖原来的数据，调用者

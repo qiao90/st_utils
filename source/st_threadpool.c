@@ -66,6 +66,7 @@ void st_threadpool_destroy(P_ST_THREAD_MANAGE p_manage)
             if (pth->pid)
             {
                 pthread_cancel(pth->pid);
+                pthread_join(pth->pid, NULL); // only this time was really canceled
                 free(pth);
             }
         }

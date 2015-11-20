@@ -33,7 +33,7 @@ typedef struct _st_tls_ctx_struct {
     char    key_file[PATH_MAX];
     char    ca_file[PATH_MAX];
     enum    _ST_WORK_STATUS work_status;
-    P_SSL_CTX    p_ctx;  //Î¨Ò»µÄ¶ÔÏó
+    P_SSL_CTX    p_ctx;  //å”¯ä¸€çš„å¯¹è±¡
 } ST_TLS_STRUCT, *P_ST_TLS_STRUCT;
 
 
@@ -120,9 +120,11 @@ static inline void tls_rand_seed(void)
 
 
 typedef struct _st_RSA_AES_struct {
-    RSA     *p_pubkey;  //¿Í»§¶ËÓÃ
-    RSA     *p_prikey;  //·şÎñÆ÷ÓÃ
-    char    aes_str[33];    //¿Í»§¶Ë²úÉú
+    RSA     *p_pubkey;  //å®¢æˆ·ç«¯ç”¨
+    RSA     *p_prikey;  //æœåŠ¡å™¨ç”¨
+    char    aes_str[33];    //å®¢æˆ·ç«¯äº§ç”Ÿ
+    int     socket;     //ä¿ç•™å¯¹ç«¯çš„socketï¼Œç”¨äºæ›´æ–°å¯†é’¥ç­‰æ“ä½œ
+    pthread_mutex_t mutex;
 } ST_RSA_AES_STRUCT, *P_ST_RSA_AES_STRUCT;
 P_ST_RSA_AES_STRUCT st_RSA_AES_setup_srv(const char* prikey_file,
                                          const P_ST_SMALL_OBJ p_aes_obj);
