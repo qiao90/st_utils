@@ -11,6 +11,8 @@ static const int MAX_THREADS = 100;
 
 P_ST_THREAD_MANAGE st_threadpool_init(P_ST_THREAD_MANAGE p_manage, int cnt)
 {
+    int i = 0;
+
     if (!p_manage || cnt < 0)
         return NULL;
 
@@ -27,7 +29,7 @@ P_ST_THREAD_MANAGE st_threadpool_init(P_ST_THREAD_MANAGE p_manage, int cnt)
                           threadpool_manage, p_manage) != 0) 
         return NULL;
 
-    for (int i = 0; i<cnt; i++)
+    for (i = 0; i<cnt; i++)
     {
         p_thread = (P_ST_THREAD)malloc(sizeof(ST_THREAD));
         if (!p_thread)
@@ -295,8 +297,9 @@ int st_threadpool_test(void)
     }
 
     int num = 1;
+    int i   = 0;
 
-    for (int i = 0; i < 20000; i++)
+    for (i = 0; i < 20000; i++)
     {
         num += i;
         st_threadpool_push_task(p_manage,test_func,&num);

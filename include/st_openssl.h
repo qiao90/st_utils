@@ -12,7 +12,8 @@
 #include <openssl/ssl.h>
 #include <openssl/x509.h>
 #include <openssl/x509_vfy.h>
-
+#include <linux/limits.h>
+#include <pthread.h>
 
 #include <sys/utsname.h>
 #include <unistd.h>
@@ -40,7 +41,6 @@ typedef struct _st_tls_ctx_struct {
 P_ST_TLS_STRUCT st_tls_create_ctx(P_ST_TLS_STRUCT p_st_tls);
 SSL* st_tls_create_ssl(P_ST_TLS_STRUCT p_st_tls, int sock);
 void st_tls_destroy(P_ST_TLS_STRUCT p_st_tls);
-static X509 *st_tls_load_cert(const char *file);
 int st_tls_verify_cert_with_CA(const char* certfile, X509* certX, const char* CAfile, 
 				STACK_OF(X509) *tchain, STACK_OF(X509_CRL) *crls);
 X509* st_tls_build_cert_from_str_S(const char* pemCertString);
@@ -132,6 +132,7 @@ P_ST_RSA_AES_STRUCT st_RSA_AES_setup_cli(const char* pubkey_file,
                                          P_ST_SMALL_OBJ p_aes_obj);
 ST_SMALL_POBJ st_AES_encrypt_S(const char* data, size_t len, P_ST_RSA_AES_STRUCT p_st);
 size_t st_AES_decrypt(char* data, size_t len, P_ST_RSA_AES_STRUCT p_st);
+static X509 *st_tls_load_cert(const char *file);
 void st_tls_test(void);
 
 #endif //_ST_OPENSSL_H_

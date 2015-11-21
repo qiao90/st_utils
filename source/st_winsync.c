@@ -3,6 +3,7 @@
 #include "st_interface.h"
 
 #include <sys/timeb.h>
+#include <pthread.h>
 
 /**
  * 主要用于提供一些在Windows下同步操作的Linux实现 
@@ -553,7 +554,7 @@ void st_mutex_test_intra(void)
     lseek(p_token->fd, 0, SEEK_SET);
     int sz = read(p_token->fd, buf, 512);
     buf[sz] = '\0';
-    st_print("INFO(%d):%s\n",strlen(buf),buf);
+    st_print("INFO(%lu):%s\n",strlen(buf),buf);
 
     st_memmap_close(p_token);
     st_memmap_destroy(p_token);

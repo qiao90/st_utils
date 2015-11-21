@@ -11,7 +11,7 @@
 static void st_timer_cancel_func(void* data)
 {
     P_ST_TIMER_SRV pt_srv = (P_ST_TIMER_SRV)data;
-    st_print("Thread st_timer_service was canceled(%d)!\n", 
+    st_print("Thread st_timer_service was canceled(%lu)!\n", 
              pt_srv->pid);
 }
 
@@ -112,7 +112,7 @@ P_ST_TIMER_OBJ st_add_timer(P_ST_TIMER_SRV pt_srv,
 
     if (slist_count(&pt_srv->timer_objs) >= pt_srv->max_timers)
     {
-        st_print("MAX TIMER(%d), UNABLE TO ADD!\n");
+        st_print("MAX TIMER(%d), UNABLE TO ADD!\n", pt_srv->max_timers);
         return NULL;
     }
 
@@ -159,7 +159,7 @@ P_ST_TIMER_OBJ st_add_timer(P_ST_TIMER_SRV pt_srv,
     GOTO_IF_TRUE((ret == -1), failed);
     slist_add(&pt_obj->list, &pt_srv->timer_objs);
 
-    st_print("ADDING TIMER %s:%d ms OK!\n", pt_obj->timer_name,
+    st_print("ADDING TIMER %s:%lu ms OK!\n", pt_obj->timer_name,
              pt_obj->m_sec);
 
     return pt_obj;
@@ -206,7 +206,7 @@ P_ST_TIMER_SRV st_remove_timer(P_ST_TIMER_SRV pt_srv,
 void st_destroy_timers(P_ST_TIMER_SRV pt_srv)
 {
     if (!pt_srv)
-        return NULL;
+        return;
 
     P_ST_TIMER_OBJ p_node = NULL;
     slist_for_each_entry(p_node, &pt_srv->timer_objs, list)

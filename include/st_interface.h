@@ -8,6 +8,7 @@
 #include <sys/epoll.h>
 #include "WINDEF.H"
 #include "st_threadpool.h"
+#include <linux/limits.h>
 
 typedef struct __epoll_event 
 {

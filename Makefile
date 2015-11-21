@@ -11,7 +11,7 @@ SHELL = /bin/sh
 VERSION = 1.0
 SUBDIRS = source
 TESTDIR = test
-EXTRAFLAGS = -g -I./include -lpthread -lrt -lssl -lcrypto
+EXTRAFLAGS = -g -I./include -lpthread -lrt -lssl -lcrypto -Wall
 OBJDIR = obj
 
 vpath %.c $(SUBDIRS)
@@ -28,7 +28,7 @@ all : $(PACKAGE)
 .PHONY : all
 .PHONY : test
 
-$(PACKAGE) : $(objs)
+$(PACKAGE) : $(objs) main.c
 	$(CC) -c $(CCFLAGS) $(EXTRAFLAGS) $(SUBDIRS)/main.c -o $(OBJDIR)/main.o
 	$(CC) $(CCFLAGS) $(EXTRAFLAGS) $(objs) $(OBJDIR)/main.o -o $(PACKAGE) 
 

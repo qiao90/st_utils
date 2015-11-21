@@ -409,6 +409,7 @@ P_ST_RSA_AES_STRUCT st_RSA_AES_setup_cli(const char* pubkey_file,
     char md5_str[33];
     FILE* fp = NULL;
     char* ptr = NULL;
+    int	  i = 0;
 
     RET_NULL_IF_TRUE( !(ptr = random_str()) );
     p_st = (P_ST_RSA_AES_STRUCT) malloc(sizeof(ST_RSA_AES_STRUCT));
@@ -427,7 +428,7 @@ P_ST_RSA_AES_STRUCT st_RSA_AES_setup_cli(const char* pubkey_file,
     free(ptr);
 
     memset(md5_str, 0, sizeof(md5_str));
-    for(int i = 0; i < 16; i++ )  
+    for(i = 0; i < 16; i++ )  
     {  
         char tmp[3];
         sprintf(tmp,"%02X", md5_data[i]); // sprintf并不安全  
@@ -483,6 +484,7 @@ ST_SMALL_POBJ st_AES_encrypt_S(const char* data, size_t len, P_ST_RSA_AES_STRUCT
     char*  data_out = NULL;
     AES_KEY aes_key;
     ST_SMALL_POBJ ret_pobj;
+    int	i = 0;
     
     ret_pobj.data = NULL;
     ret_pobj.len  = 0;
@@ -513,7 +515,7 @@ ST_SMALL_POBJ st_AES_encrypt_S(const char* data, size_t len, P_ST_RSA_AES_STRUCT
     data_en[1] = len & 0xFF;
     memcpy(data_en + 2, data, len); //allready padded
 
-    for(int i = 0; i < data_len/AES_BLOCK_SIZE; i++)
+    for(i = 0; i < data_len/AES_BLOCK_SIZE; i++)
     {
         AES_encrypt( data_en + i*AES_BLOCK_SIZE , 
                      data_out + i*AES_BLOCK_SIZE , &aes_key);
@@ -535,6 +537,7 @@ size_t st_AES_decrypt(char* data, size_t len, P_ST_RSA_AES_STRUCT p_st)
     char*  data_en  = NULL;
     char*  data_out = NULL;
     AES_KEY aes_key;
+    int	i = 0;
 
     if (!data || len <= 0 || !p_st || !strlen(p_st->aes_str))
         return -1;
@@ -557,7 +560,7 @@ size_t st_AES_decrypt(char* data, size_t len, P_ST_RSA_AES_STRUCT p_st)
     memset(data_en, 0, len);
     memcpy(data_en, data, len); //allready padded
 
-    for(int i = 0; i < len/AES_BLOCK_SIZE; i++)
+    for(i = 0; i < len/AES_BLOCK_SIZE; i++)
     {
         AES_decrypt( data_en + i*AES_BLOCK_SIZE , 
                      data_out + i*AES_BLOCK_SIZE , &aes_key);
@@ -598,12 +601,12 @@ void st_tls_test(void)
 
     pobj = st_AES_encrypt_S(msg, strlen(msg), ps1);
     
-    st_print("原始数据加密长度:%d\n", pobj.len);
+    st_print("原始数据加密长度:%lu\n", pobj.len);
 
     st_AES_decrypt(pobj.data, pobj.len, ps2);
 
     st_print("解密数据：%s\n", pobj.data);
-    st_print("解密长度：%d\n", pobj.len);
+    st_print("解密长度：%lu\n", pobj.len);
     
     free(pobj.data);
 

@@ -188,6 +188,7 @@ static inline DWORD GetTickCount(void)
 }
 
 #include <string.h>
+#include <strings.h>
 
 static inline char *strtok_s(
    char *strToken,
@@ -255,6 +256,7 @@ BOOL WINAPI CloseHandle_Event(HANDLE hObject);
 static inline int closesocket( SOCKET s)
 {
 	close(s);
+	return 0;
 }
 
 #include <errno.h>

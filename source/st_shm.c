@@ -92,13 +92,13 @@ void* st_shm_create(const char* share_name, size_t max_size)
 	
     if((fp = fopen(path_buf, "w")))
     {
-        snprintf(rw_buf, sizeof(rw_buf), "ADDR:%p,SIZE:%u\n", p_token->location, 
+        snprintf(rw_buf, sizeof(rw_buf), "ADDR:%p,SIZE:%lu\n", p_token->location, 
                  p_token->size);
         fwrite(rw_buf, strlen(rw_buf)+1, 1, fp);
         fclose(fp);
     }
 
-    st_d_print("ShareName:%s,\t Location:%p,\t MapSize:%u\n", 
+    st_d_print("ShareName:%s,\t Location:%p,\t MapSize:%lu\n", 
                p_token->shmname, p_token->location, p_token->size);
 		   
     return p_token;
@@ -160,10 +160,10 @@ void* st_shm_open(const char* share_name, int fixaddr, int writable)
     if((fp = fopen(path_buf, "r")))
     {
         rewind(fp);
-        fscanf(fp,"ADDR:%p,SIZE:%u\n", &p_token->location,
+        fscanf(fp,"ADDR:%p,SIZE:%lu\n", &p_token->location,
                &p_token->size);
         fclose(fp);
-        st_d_print("MAPINFO ADDR:%p,SIZE:%u\n", p_token->location,
+        st_d_print("MAPINFO ADDR:%p,SIZE:%lu\n", p_token->location,
                p_token->size);
     }
 	else

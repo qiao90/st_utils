@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <execinfo.h>
 
+#include <linux/kernel.h>
+
 typedef unsigned long ulong;
 typedef unsigned int  uint;
 typedef unsigned char uchar;

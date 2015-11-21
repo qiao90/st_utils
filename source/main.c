@@ -46,15 +46,14 @@ int main(int argc, char* argv)
     //st_event_thread_test();
     //st_tls_test();
 	
-	//utf8_gbk_test(); 
+    //utf8_gbk_test(); 
 	
-	st_tls_verify_cert_with_CA("./ssl/test.crt", NULL,  "./ssl/cacert.pem", 0, 0);
+    st_tls_verify_cert_with_CA("./ssl/test.crt", NULL,  "./ssl/cacert.pem", 0, 0);
 	
-	X509* certX = st_tls_build_cert_from_str_S(pem_str);
-	st_tls_verify_cert_with_CA( NULL, certX, "./ssl/cacert.pem", 0, 0);
+    X509* certX = st_tls_build_cert_from_str_S(pem_str);
+    st_tls_verify_cert_with_CA( NULL, certX, "./ssl/cacert.pem", 0, 0);
 	
-	X509_free(certX);
-	
+    X509_free(certX);
 	
     //st_utils_timer_test();
 }

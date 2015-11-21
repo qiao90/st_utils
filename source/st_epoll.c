@@ -124,12 +124,13 @@ void st_event_loop(P_EPOLL_STRUCT p_epoll, P_ST_THREAD_MANAGE p_manage, void* ha
     struct epoll_event* p_events = p_epoll->p_events;
     int listen_socket = p_epoll->event.data.fd;
 
+    int e_i = 0;
     int ready = 0;
 
     for ( ; ; )
     {
         ready = epoll_wait(p_epoll->event_fd, p_events, p_epoll->max_events, -1); 
-        for (int e_i = 0; e_i < ready; e_i++)
+        for (e_i = 0; e_i < ready; e_i++)
         {
 			if( (p_epoll->p_events[e_i].events & EPOLLERR) )			
             {
