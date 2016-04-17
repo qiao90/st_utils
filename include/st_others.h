@@ -3,6 +3,10 @@
 
 #define DEBUG
 
+#ifdef __cplusplus 
+extern "C" {
+#endif //__cplusplus 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <execinfo.h>
@@ -66,7 +70,7 @@ typedef struct _st_small_pobj {
             goto flag;                                          \
     }while(0) 
 
-static inline void backtrace_info(void)
+static inline void backtrace_info(int param)
 {
 	int j, nptrs;
 #define BT_SIZE 100
@@ -92,7 +96,13 @@ static inline void backtrace_info(void)
 #define SYS_ABORT(...)  \
     do{ fprintf( stderr,"!!!DIE:%s|%s<%d>\n",__FILE__, __FUNCTION__,__LINE__); \
 		fprintf( stderr , __VA_ARGS__ ); \
-        backtrace_info(); abort();    \
+        backtrace_info(0); abort();    \
     }while(0)
+
+
+
+#ifdef __cplusplus 
+}
+#endif //__cplusplus 
 
 #endif  //__ST_OTHERS_H

@@ -1,6 +1,10 @@
 #ifndef __ST_SLIST_H
 #define __ST_SLIST_H
 
+#ifdef __cplusplus 
+extern "C" {
+#endif //__cplusplus 
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -89,7 +93,10 @@ static inline P_SLIST_HEAD slist_fetch(P_SLIST_HEAD head)
     P_SLIST_HEAD ret = NULL;
 
     if (!head || slist_empty(head))
-        return NULL;
+    {
+        //cout << "EMPTY_LIST" << endl;
+        return NULL;   
+    }
     
     ret = head->next;
     head->next = head->next->next;  //may also be null
@@ -192,13 +199,26 @@ static inline int slist_u_test(void)
     }
     free(p_node);
 
+    fprintf(stderr,"STAGE-PA\n");
     slist_for_each_entry(p_node, p_test_head, list)
         st_print("%d\n", p_node->data);
 
-    pos = slist_fetch(p_test_head); //50
+    slist_for_each_entry(p_node, p_test_head, list)
+    {
+        if(p_node->data == 20 || p_node->data == 50)
+        {
+            slist_remove(&p_node->list, p_test_head);
+        }
+    }
+
+    fprintf(stderr,"STAGE-PB\n");
+    slist_for_each_entry(p_node, p_test_head, list)
+        st_print("%d\n", p_node->data);
+
+    //pos = slist_fetch(p_test_head); //50
     pos = slist_fetch(p_test_head); //40
     pos = slist_fetch(p_test_head); //30
-    pos = slist_fetch(p_test_head); //20
+    //pos = slist_fetch(p_test_head); //20
     pos = slist_fetch(p_test_head); //10
     p_node = list_entry(pos, TEST_STRUCT, list);
     if (p_node->data != 10)
@@ -221,4 +241,11 @@ static inline int slist_u_test(void)
 
 	fprintf(stderr,"slist unit test PASS!");
 }
+
+
+
+#ifdef __cplusplus 
+}
+#endif //__cplusplus 
+
 #endif //ST_SLIST_H

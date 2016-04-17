@@ -1,6 +1,10 @@
 #ifndef _ST_OPENSSL_H_
 #define _ST_OPENSSL_H_
 
+#ifdef __cplusplus 
+extern "C" {
+#endif //__cplusplus 
+
 #include <openssl/crypto.h>
 #include <openssl/dh.h>
 #include <openssl/dsa.h>
@@ -134,5 +138,10 @@ ST_SMALL_POBJ st_AES_encrypt_S(const char* data, size_t len, P_ST_RSA_AES_STRUCT
 size_t st_AES_decrypt(char* data, size_t len, P_ST_RSA_AES_STRUCT p_st);
 static X509 *st_tls_load_cert(const char *file);
 void st_tls_test(void);
+
+
+#ifdef __cplusplus 
+}
+#endif //__cplusplus 
 
 #endif //_ST_OPENSSL_H_

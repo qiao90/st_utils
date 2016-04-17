@@ -1,6 +1,11 @@
 #ifndef __ST_THREADPOOL_H
 #define __ST_THREADPOOL_H
 
+#ifdef __cplusplus 
+extern "C" {
+#endif //__cplusplus 
+
+
 #include "st_others.h"
 #include "st_slist.h"
 
@@ -54,5 +59,11 @@ static void* threadpool_run(void *data);
 static void* threadpool_manage(void *data);
 
 int st_threadpool_test(void);
+
+
+
+#ifdef __cplusplus 
+}
+#endif //__cplusplus 
 
 #endif  //__ST_THREADPOOL_H

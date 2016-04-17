@@ -1,6 +1,11 @@
 #ifndef __ST_TIMER_H
 #define __ST_TIMER_H
 
+#ifdef __cplusplus 
+extern "C" {
+#endif //__cplusplus 
+
+
 // Timer
 #include <sys/timerfd.h>
 #include <pthread.h>
@@ -38,5 +43,12 @@ P_ST_TIMER_SRV st_remove_timer(P_ST_TIMER_SRV pt_srv,
                           const char* t_name);
 void st_destroy_timers(P_ST_TIMER_SRV pt_srv);
 void st_utils_timer_test(void);
+
+
+
+#ifdef __cplusplus 
+}
+#endif //__cplusplus 
+
 
 #endif //__ST_TIMER_H

@@ -1,6 +1,10 @@
 #ifndef __ST_INTERFACE_H
 #define __ST_INTERFACE_H
 
+#ifdef __cplusplus 
+extern "C" { 
+#endif //__cplusplus
+
 #include "st_others.h"
 /**
  * For st_epoll
@@ -138,5 +142,9 @@ BOOL SetEvent( HANDLE hEvent);
 
 void Sleep(DWORD dwMilliseconds);
 BOOL get_workdir( char* store);
+
+#ifdef __cplusplus 
+}
+#endif //__cplusplus
 
 #endif
