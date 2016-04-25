@@ -11,7 +11,7 @@ SHELL = /bin/sh
 VERSION = 1.0
 SUBDIRS = source
 TESTDIR = test
-EXTRAFLAGS = -g -I./include -lpthread -lrt -lssl -lcrypto -Wall
+EXTRAFLAGS = -g -I./include -lpthread -lrt -lssl -lcrypto -Wall $(shell mysql_config --cflags --libs )
 OBJDIR = obj
 
 vpath %.c $(SUBDIRS)

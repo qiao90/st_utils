@@ -7,6 +7,18 @@
 
 #define MAX_LINE 2048
 
+// 将字符串中的英文字符全部小写
+// 采用UTF-8编码
+/*
+    00000000 -- 0000007F:   0xxxxxxx
+    00000080 -- 000007FF:   110xxxxx 10xxxxxx
+    00000800 -- 0000FFFF:   1110xxxx 10xxxxxx 10xxxxxx
+    00010000 -- 001FFFFF:   11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+*/
+#define IS_IN_RANGE(c, f, l)    (((c) >= (f)) && ((c) <= (l)))
+#define UTF8_CHAR_LEN( byte )   ((( 0xE5000000 >> (( byte >> 3 ) & 0x1e )) & 3 ) + 1)
+
+
 //删除buf语句开头和结尾的空白字符
 void st_strip(char* buf, size_t len)
 {
@@ -45,6 +57,24 @@ void st_strip(char* buf, size_t len)
 	return;
 }
 
+void st_lowcase_string(char* buf)
+{
+    while(*buf != '\0')
+    {
+        //ascii 字符
+        if(UTF8_CHAR_LEN(*buf) == 1)
+        {
+            if(IS_IN_RANGE(*buf, 0x41, 0x5a))
+                *buf = *buf | 0x20;
+            buf += 1;
+            continue;
+        }
+
+        // 多字符
+        buf += UTF8_CHAR_LEN(*buf);
+    }
+}
+
 int st_getline(char* buf, FILE* fp)
 {
 	static char dirty[MAX_LINE];
@@ -79,7 +109,7 @@ int st_getline(char* buf, FILE* fp)
 	return 1;
 }
 
-static char* code_convert(char* src, int size   , 
+static char* code_convert(char* src, int size   ,
                           const char* tocode, const char* fromcode)
 {
     char*  in_buf = NULL; char* p_in = NULL;
@@ -95,7 +125,7 @@ static char* code_convert(char* src, int size   ,
     in_buf = strdup(src);
     if (!in_buf)
         return NULL;
-    out_buf = (char *)malloc(out_len); 
+    out_buf = (char *)malloc(out_len);
     if (!out_buf)
     {
         free(in_buf);
@@ -106,7 +136,7 @@ static char* code_convert(char* src, int size   ,
 
     // 忽略输入中非法的字符。测试过程中有这种情况，看实际的效果
     GOTO_IF_TRUE ( (cd = iconv_open(tocode, fromcode)) == (iconv_t)-1, failed);
-    
+
     memset(out_buf, 0, out_len);
     conv_cnt = iconv(cd, &p_in, &in_len, &p_out, &out_len);
     iconv_close(cd);
@@ -114,21 +144,21 @@ static char* code_convert(char* src, int size   ,
     //Perfect ONE
     if ( conv_cnt == 0 && strlen(out_buf) < size)
     {
-        //st_print("GOOD: code_convert(%s->%s)[%s]", 
+        //st_print("GOOD: code_convert(%s->%s)[%s]",
         //fromcode, tocode, out_buf);
         memset(src, 0, size);
         strcpy(src, out_buf);
     }
     else if ( strlen(out_buf) > 0)
     {
-        st_print("WARNING: code_convert(%s->%s)[%s]", 
+        st_print("WARNING: code_convert(%s->%s)[%s]",
                  fromcode, tocode, out_buf);
         memset(src, 0, size);
         strcpy(src, out_buf);
     }
     else
     {
-        st_print("ERROR: code_convert(%s->%s)[%s]", 
+        st_print("ERROR: code_convert(%s->%s)[%s]",
                  fromcode, tocode, src);
         goto failed;
     }

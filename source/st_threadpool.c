@@ -26,7 +26,7 @@ P_ST_THREAD_MANAGE st_threadpool_init(P_ST_THREAD_MANAGE p_manage, int cnt)
 
     //创建管理统计线程
     if(pthread_create(&(p_manage->manage_pid), NULL,
-                          threadpool_manage, p_manage) != 0) 
+                          threadpool_manage, p_manage) != 0)
         return NULL;
 
     for (i = 0; i<cnt; i++)
@@ -37,7 +37,7 @@ P_ST_THREAD_MANAGE st_threadpool_init(P_ST_THREAD_MANAGE p_manage, int cnt)
         memset(p_thread, 0, sizeof(ST_THREAD));
         p_thread->status = THREAD_SPARE;
         if(pthread_create(&(p_thread->pid), NULL,
-                          threadpool_run, p_manage) != 0) 
+                          threadpool_run, p_manage) != 0)
             goto fail_proc;
 
         slist_add(&p_thread->list, &p_manage->threads);
@@ -56,12 +56,12 @@ void st_threadpool_destroy(P_ST_THREAD_MANAGE p_manage)
 {
     P_SLIST_HEAD pos = NULL;
     P_ST_THREAD  pth = NULL;
-    P_ST_TASK    ptk = NULL; 
+    P_ST_TASK    ptk = NULL;
 
     if (!p_manage)
         return;
 
-    if (!slist_empty(&p_manage->threads)) 
+    if (!slist_empty(&p_manage->threads))
     {
         slist_for_each_entry(pth, &p_manage->threads, list)
         {
@@ -74,7 +74,7 @@ void st_threadpool_destroy(P_ST_THREAD_MANAGE p_manage)
         }
     }
 
-    if (!slist_empty(&p_manage->tasks)) 
+    if (!slist_empty(&p_manage->tasks))
     {
         slist_for_each_entry(ptk, &p_manage->tasks, list)
         {
@@ -84,7 +84,7 @@ void st_threadpool_destroy(P_ST_THREAD_MANAGE p_manage)
 
     if (p_manage->manage_pid)
     {
-        pthread_cancel(p_manage->manage_pid); 
+        pthread_cancel(p_manage->manage_pid);
     }
 
 
@@ -97,7 +97,7 @@ void st_threadpool_statistic(P_ST_THREAD_MANAGE p_manage)
 {
     P_SLIST_HEAD pos = NULL;
     P_ST_THREAD  pth = NULL;
-    P_ST_TASK    ptk = NULL; 
+    P_ST_TASK    ptk = NULL;
     time_t now;
     time(&now);
 
@@ -109,10 +109,10 @@ void st_threadpool_statistic(P_ST_THREAD_MANAGE p_manage)
 
     st_print("======================\n");
     st_print("Detail Thread Status:\n");
-    slist_for_each(pos, &p_manage->threads)  
+    slist_for_each(pos, &p_manage->threads)
     {
         pth = list_entry(pos, ST_THREAD, list);
-        st_print("TID[%lu], status:%s, time:%fSec\n", pth->pid, 
+        st_print("TID[%lu], status:%s, time:%fSec\n", pth->pid,
                  THREAD_STATUS_STR[pth->status], difftime(now, pth->start));
     }
 
@@ -134,7 +134,7 @@ void st_threadpool_refresh(P_ST_THREAD_MANAGE p_manage)
     int dead = 0;
 
 
-    slist_for_each(pos, &p_manage->threads)  
+    slist_for_each(pos, &p_manage->threads)
     {
         pth = list_entry(pos, ST_THREAD, list);
 
@@ -171,17 +171,17 @@ int st_threadpool_push_task(P_ST_THREAD_MANAGE p_manage, void *(*start_routine) 
     p_tk->list.next = NULL;
 
     pthread_mutex_lock(&p_manage->tk_mutex);
-    slist_add(&p_tk->list, &p_manage->tasks);   
+    slist_add(&p_tk->list, &p_manage->tasks);
     //如果等待的任务太多，而且有睡眠线程，就尝试唤醒。
-    if (p_manage->thread_spare > 0 && 
+    if (p_manage->thread_spare > 0 &&
         slist_count(&p_manage->tasks) > (int)(p_manage->thread_total * 0.5))
     {
         if (slist_count(&p_manage->tasks) > (int)(p_manage->thread_total * 0.2))
             pthread_cond_signal(&p_manage->tk_cond);
         else
-            pthread_cond_signal(&p_manage->tk_cond); 
+            pthread_cond_signal(&p_manage->tk_cond);
     }
-    pthread_mutex_unlock(&p_manage->tk_mutex); 
+    pthread_mutex_unlock(&p_manage->tk_mutex);
 
     return 1;
 }
@@ -195,7 +195,7 @@ int st_threadpool_pop_task(P_ST_THREAD_MANAGE p_manage, P_ST_TASK p_task_store)
         return 0;
 
     pthread_mutex_lock(&p_manage->tk_mutex);
-    ptr = slist_fetch(&p_manage->tasks);    
+    ptr = slist_fetch(&p_manage->tasks);
     pthread_mutex_unlock(&p_manage->tk_mutex);
 
     if (ptr)
@@ -213,7 +213,7 @@ int st_threadpool_pop_task(P_ST_THREAD_MANAGE p_manage, P_ST_TASK p_task_store)
 
 static void* threadpool_manage(void *data)
 {
-    P_ST_THREAD_MANAGE p_manage = 
+    P_ST_THREAD_MANAGE p_manage =
         (P_ST_THREAD_MANAGE)data;
 
     for ( ; ;)
@@ -234,7 +234,7 @@ static void* threadpool_run(void *data)
 retry:
 
     p_me = NULL;
-       
+
     slist_for_each_entry(ptr, &p_manage->threads, list)
     {
         if (ptr->pid == pthread_self())
@@ -247,7 +247,7 @@ retry:
     if (!p_me)
     {
         st_print("PID FIND ERROR!\n");
-        sleep(5); 
+        sleep(5);
         goto retry;
     }
 
@@ -259,7 +259,7 @@ retry:
             p_me->status = THREAD_RUNNING;
             (*(task.handler))(task.arg);
         }
-        
+
         pthread_mutex_lock(&p_manage->tk_mutex);
         //即使被惊醒了，也会跳过这个循环上去再次检测
         p_me->status = THREAD_SPARE;
@@ -275,7 +275,7 @@ static void* test_func(void* data)
     static int i = 0;
     int num = *(int *)data;
     //st_print("Function Called with %d under %ul \n", num, pthread_self());
-    
+
     i ++;
 
     // 活动检测测试

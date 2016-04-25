@@ -35,8 +35,9 @@ oD373ljzw/jqJWlqm/5qWLouC8E6MivoS1KM5VYe4AdMk3irbZiVonSJx4pvD/Li\n\
 Ni/4LdJvefxTkw==\n\
 -----END CERTIFICATE-----";				
 				
+int st_mysql_conn_test(void);
 
-int main(int argc, char* argv)
+int main(int argc, char* argv[])
 {
     //st_threadpool_test();
     //st_mutex_test_intra();
@@ -48,12 +49,14 @@ int main(int argc, char* argv)
 	
     //utf8_gbk_test(); 
 	
-    st_tls_verify_cert_with_CA("./ssl/test.crt", NULL,  "./ssl/cacert.pem", 0, 0);
+    // st_tls_verify_cert_with_CA("./ssl/test.crt", NULL,  "./ssl/cacert.pem", 0, 0);
 	
-    X509* certX = st_tls_build_cert_from_str_S(pem_str);
-    st_tls_verify_cert_with_CA( NULL, certX, "./ssl/cacert.pem", 0, 0);
+    // X509* certX = st_tls_build_cert_from_str_S(pem_str);
+    // st_tls_verify_cert_with_CA( NULL, certX, "./ssl/cacert.pem", 0, 0);
 	
-    X509_free(certX);
+    // X509_free(certX);
 	
     //st_utils_timer_test();
+
+    st_mysql_conn_test();
 }
