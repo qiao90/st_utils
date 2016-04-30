@@ -18,6 +18,27 @@ typedef unsigned int  uint;
 typedef unsigned char uchar;
 typedef unsigned short ushort;
 
+#include <sys/types.h>
+#define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
+#define container_of(ptr, type, member) ({                      \
+             const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
+             (type *)( (char *)__mptr - offsetof(type,member) );})
+
+#ifdef FALSE
+#undef FALSE
+#endif
+#define FALSE                           (1 == 0)
+
+#ifdef TRUE
+#undef TRUE
+#endif
+#define TRUE                            (1 == 1)
+
+#ifndef NULL
+#define NULL                            (void *) 0
+#endif
+
+
 #ifdef DEBUG
 #define st_d_print(...) \
 	do{ fprintf( stderr,"DEBUG:%s|%s<%d>:",__FILE__, __FUNCTION__,__LINE__); \

@@ -1,6 +1,11 @@
+DEBUG ?= 1
 CC = gcc
-CFLAGS = -g -O2
-CPPFLAGS = 
+ifeq ($(DEBUG),1)
+CFLAGS = -g -O2 -DDEBUG
+else
+CFLAGS = -O2
+endif
+CPPFLAGS = $(CFLAGS)
 CXX = g++
 CXXFLAGS = $(CFLAGS)
 PACKAGE = st_utils
@@ -24,25 +29,34 @@ test_srcs = $(notdir $(wildcard $(TESTDIR)/*.c))
 test_objs = $(test_srcs:%.c=$(OBJDIR)/%.o)
 test_exec = $(test_srcs:%.c=%)
 
+ifeq ($(DEBUG),1)
+TARGET_DIR=Debug
+else
+TARGET_DIR=Release
+endif
+
 all : $(PACKAGE)
 .PHONY : all
 .PHONY : test
 
 $(PACKAGE) : $(objs) main.c
+	@mkdir -p $(TARGET_DIR)
 	$(CC) -c $(CCFLAGS) $(EXTRAFLAGS) $(SUBDIRS)/main.c -o $(OBJDIR)/main.o
-	$(CC) $(CCFLAGS) $(EXTRAFLAGS) $(objs) $(OBJDIR)/main.o -o $(PACKAGE) 
+	$(CC) $(CCFLAGS) $(EXTRAFLAGS) $(objs) $(OBJDIR)/main.o -o $(TARGET_DIR)/$(PACKAGE)
 
 $(objs) : $(OBJDIR)/%.o: %.c
 	@mkdir -p $(OBJDIR)
-	$(CC) -c $(CCFLAGS) $(EXTRAFLAGS) $< -o $@ 
+	$(CC) -c $(CCFLAGS) $(EXTRAFLAGS) $< -o $@
 
-test : $(test_objs)
-	$(foreach test_target, $(test_exec), $(CC) $(CCFLAGS) $(EXTRAFLAGS) $(objs) -o $(test_target)  $(OBJDIR)/$(test_target).o ;)	
+test : $(objs) $(test_objs)
+	@mkdir -p $(TARGET_DIR)
+	$(foreach test_target, $(test_exec), $(CC) $(CCFLAGS) $(EXTRAFLAGS) $(objs) -o $(TARGET_DIR)/$(test_target)  $(OBJDIR)/$(test_target).o ;)
 $(test_objs) : $(OBJDIR)/%.o: %.c
-	$(CC) -c $(CCFLAGS) $(EXTRAFLAGS) $< -o $@ 
+	$(CC) -c $(CCFLAGS) $(EXTRAFLAGS) $< -o $@
 
-.PHONY : clean 
-clean :	
+.PHONY : clean
+clean :
 	-rm -fr $(PACKAGE)
-	-rm -fr $(OBJDIR)
-	-rm -fr $(test_exec) 
+	-rm -fr $(OBJDIR)/*
+	-rm -fr $(TARGET_DIR)
+
