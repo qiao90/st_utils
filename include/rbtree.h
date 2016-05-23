@@ -32,6 +32,10 @@
 #include <linux/kernel.h>
 #include <linux/stddef.h>
 
+#ifndef NULL
+#define NULL ((void *)0)
+#endif 
+
 struct rb_node {
 	unsigned long  __rb_parent_color;
 	struct rb_node *rb_right;

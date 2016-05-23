@@ -35,8 +35,18 @@ typedef unsigned short ushort;
 #define TRUE                            (1 == 1)
 
 #ifndef NULL
-#define NULL                            (void *) 0
+#define NULL ((void *)0)
 #endif
+
+/**
+ * 统一一下函数的返回类型，不要自己都搞晕了 
+ *  
+ * 如果函数的返回值只是表示成功或者失败，就用下面的类型 
+ */
+typedef enum RET_TYPE {
+    RET_YES = 1,
+    RET_NO  = 0,
+} RET_T;
 
 
 #ifdef DEBUG

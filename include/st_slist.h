@@ -21,17 +21,27 @@ static inline void slist_init(P_SLIST_HEAD head)
 }
 
 // replaced of container_of
+#define container_of(ptr, type, member) \
+((type *)((char *)(ptr)-(unsigned long)(&((type *)0)->member)))  
+
 #define list_entry(ptr, type, member) \
 ((type *)((char *)(ptr)-(unsigned long)(&((type *)0)->member)))  
 
 #define slist_for_each(pos, head) \
 	for (pos = (head)->next; pos != NULL; pos = pos->next)  
 
+// 可以删除元素，安全链表
+#define slist_for_each_safe(pos, n, head) \
+	for (pos = (head)->next, n = pos->next; pos && ({ n = pos->next; 1; }); pos = n)  
+
 #define slist_for_each_entry(pos, head, member)\
 	for (pos = list_entry((head)->next, typeof(*pos), member);  \
         &pos->member != NULL;								\
          pos = list_entry(pos->member.next, typeof(*pos), member))
 
+
+#define byte_offset(base, offset) \
+            ((char *)(base) + (offset))
 
 static inline void slist_add(P_SLIST_HEAD new_item, P_SLIST_HEAD head)
 {
@@ -102,6 +112,22 @@ static inline P_SLIST_HEAD slist_fetch(P_SLIST_HEAD head)
     head->next = head->next->next;  //may also be null
 
     return ret;
+}
+
+// 返回链表最后一个LIST_HEAD
+static inline P_SLIST_HEAD slist_last(P_SLIST_HEAD head)
+{
+    P_SLIST_HEAD ret = head;
+
+    if (!head || slist_empty(head))
+    {
+        return NULL;   
+    }
+    
+    while ( ret->next->next != NULL) 
+        ret = ret->next;
+
+    return ret->next;
 }
 
 static inline int slist_u_test(void)

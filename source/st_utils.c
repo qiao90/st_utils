@@ -52,7 +52,8 @@ void st_strip(char* buf, size_t len)
 			break;
 	}
 
-	strncpy(buf, ptr, l_len);
+	//strncpy(buf, ptr, l_len);
+	strncpy(buf, ptr, len);
 
 	return;
 }
